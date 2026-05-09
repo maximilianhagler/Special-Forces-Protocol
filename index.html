@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#010e03"/>
+  <title>Special Forces Protocol</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{margin:0;padding:0;background:#010e03;color:#86efac;font-family:'Barlow Condensed',sans-serif;overscroll-behavior:none;}
+    input[type=range]{-webkit-appearance:none;appearance:none;}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;}
+    #root{min-height:100vh;}
+    ::-webkit-scrollbar{display:none;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- React + ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Recharts -->
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <!-- Babel for JSX transformation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+import React,{useState,useEffect,useRef} from "react";
+import{LineChart,Line,AreaChart,Area,RadarChart,Radar,PolarGrid,PolarAngleAxis,XAxis,YAxis,CartesianGrid,Tooltip,ResponsiveContainer,Legend}from"recharts";
+const SK={s:"sfp3",g:"sfp_g3",b:"sfp_b3",sl:"sfp_sl3",fl:"sfp_fl3",pr:"sfp_pr3",n:"sfp_n3"};
+async function stGet(k){try{const r=await window.storage.get(k);return r?JSON.parse(r.value):null;}catch{return null;}}
+async function stSet(k,v){try{await window.storage.set(k,JSON.stringify(v));}catch{}}
+const G="#22c55e",G2="#4ade80",G3="#86efac",G4="#166534",G5="#15803d";
+const BG="#010e03",BG2="#021507",BG3="#031e08";
+const M="'Share Tech Mono',monospace",C="'Barlow Condensed',sans-serif";
+const TT={background:BG,border:"1px solid "+G4,borderRadius:"4px",fontSize:"11px",color:G3};
+const H=180;
+const BENCH={kfa:{avg:18,good:12,vgood:8},muscle:{avg:40,good:45,vgood:50},bmi:{lo:18.5,hi:25},vo2max:{avg:45,good:55,vgood:65}};
+const DEFAULT_GOALS=[{id:"g1",label:"Military Fitness",icon:"⚔️",priority:1,color:G},{id:"g2",label:"Kraft & Hypertrophie",icon:"💪",priority:2,color:G2},{id:"g3",label:"Ausdauer & VO2max",icon:"🏃",priority:3,color:G3},{id:"g4",label:"Körperkomposition",icon:"🔥",priority:4,color:G5}];
+const CAT=[{id:"kraft_upper",label:"Kraft Upper",icon:"💪",color:G2},{id:"kraft_lower",label:"Kraft Lower",icon:"🦵",color:G},{id:"kraft_full",label:"Kraft Full Body",icon:"🏋️",color:G3},{id:"intervall_mil",label:"Intervall Military",icon:"⚔️",color:G5},{id:"intervall_aus",label:"Intervall Ausdauer",icon:"⚡",color:G2},{id:"ausdauer",label:"Ausdauer / Run",icon:"🏃",color:G},{id:"kampfsport",label:"Kampfsport",icon:"🥊",color:G4},{id:"fussball",label:"Fußball",icon:"⚽",color:G3},{id:"sonstiges",label:"Sonstiges",icon:"📋",color:G4}];
+const AMRAP=["AMRAP","AFAP","EMOM","TABATA","FOR TIME","CHIPPER","LADDER","21-15-9"];
+const INTERVALL_AUS=["4×4 (4min/4min Pause)","10×1min","8×2min","6×3min","5×5min","Fartlek","Pyramide","30/30","Tabata (20/10×8)","20×30sek Sprint","Laktattest","Cooper Test","Beep Test"];
+const AUSDAUER_TYPEN=["Grundlagenausdauer Zone 1","Grundlagenausdauer Zone 2","Tempolauf","Longrun"];
+const PR_EXERCISES=["Kreuzheben konv.","Kreuzheben Trap Bar","Bankdrücken","Kniebeugen","Klimmzüge","Liegestütze"];
+// ── ÜBUNGSDATENBANK (350+ Übungen) ───────────────────────────────────────────
+const EXDB_KRAFT_CHEST=["Bankdrücken","Schrägbankdrücken (aufwärts)","Schrägbankdrücken (abwärts)","Flachbankdrücken Kurzhanteln","Schrägbankdrücken Kurzhanteln","Dips","Liegestütze","Enge Liegestütze","Diamant Liegestütze","Decline Liegestütze","Archer Liegestütze","Kabelflieges","Butterfly Maschine","Dumbbell Flyes","Kabelfliegen Kreuzung","Kabeldrücken Mitte","Push-Up Plus","Ring Liegestütze","Weighted Dips","Brust Dips"];
+const EXDB_KRAFT_BACK=["Klimmzüge","Klimmzüge neutral","Klimmzüge weit","Chinups","Lat Pulldown","Lat Pulldown eng","Rudern Langhantel","Rudern Kurzhanteln","Kabelrudern","T-Bar Rudern","Pendlay Row","Yates Row","Seal Row","Inverted Row","Rudern Maschine","Lat Pulldown Maschine","Hyperextension","Rückenstrecker","Good Morning","Rack Pull","Kreuzheben konventionell","Sumo Deadlift","Romanian Deadlift","Stiff Leg Deadlift","Single Leg RDL","Trap Bar Deadlift","Farmers Walk","Shrugs Langhantel","Shrugs Kurzhanteln","Face Pull","Reverse Flyes","Band Pull Apart"];
+const EXDB_KRAFT_SHOULDER=["Schulterdrücken Langhantel","Schulterdrücken Kurzhanteln","Militärpress","Arnold Press","Push Press","Lateral Raise","Front Raise","Cable Lateral Raise","Upright Row","Lu Raise","Seated Dumbbell Press","Landmine Press","Cuban Press","Bradford Press","Behind Neck Press","Machine Shoulder Press","Reverse Flyes Maschine","Face Pull"];
+const EXDB_KRAFT_ARMS=["Bizeps Curls Langhantel","Bizeps Curls Kurzhanteln","Hammer Curls","Preacher Curls","Concentration Curls","Spider Curls","Kabel Curls","Incline Dumbbell Curls","Zottman Curls","Reverse Curls","Trizeps Drücken Kabel","Skull Crusher","Close Grip Bench","Trizeps Kickbacks","Overhead Trizeps","Trizeps Dips","JM Press","Trizeps Maschine","Wrist Curls","Reverse Wrist Curls"];
+const EXDB_KRAFT_LEGS=["Kniebeugen","Goblet Squat","Front Squat","Bulgarian Split Squat","Ausfallschritte","Reverse Lunges","Walking Lunges","Side Lunges","Beinpresse","Beinpresse einbeinig","Beinstrecker","Beinbeuger liegend","Beinbeuger sitzend","Nordic Curl","Hip Thrust","Hip Thrust einbeinig","Sumo Squat","Box Squat","Hackenschmidt Kniebeuge","Cossack Squat","Pistol Squat","Step Ups","Bulgarian Hip Thrust","Glute Bridge","Donkey Kicks","Abduktion Maschine","Adduktion Maschine","Calf Raises stehend","Calf Raises sitzend","Tibia Raise","Single Leg Calf Raise","Banded Squat Walk","Monster Walk"];
+const EXDB_KRAFT_CORE=["Plank","Side Plank","Plank Shoulder Tap","Ab Wheel","Ab Roller","Russian Twist","Bicycle Crunch","Crunch","Reverse Crunch","Dragon Flag","L-Sit","Hollow Body Hold","Beinheben","Hängendes Beinheben","Hängende Knieheben","V-Up","Dead Bug","Bird Dog","Pallof Press","Cable Woodchop","Landmine Rotation","Windmill","Turkish Get Up","Suitcase Carry","Stir The Pot","Back Extension","Superman","GHR Sit Up","Weighted Sit Up","Toes To Bar"];
+const EXDB_ATHLETIC=["Power Clean","Hang Power Clean","Clean","Clean & Jerk","Power Snatch","Snatch","Hang Snatch","Push Jerk","Split Jerk","Thruster","Wallball","Kettlebell Swing","Kettlebell Snatch","Kettlebell Clean","Kettlebell Press","Kettlebell Front Squat","Kettlebell Windmill","Kettlebell Get Up","Box Jumps","Broad Jump","Depth Jump","Banded Jump Squat","Trap Bar Jump","Hurdle Jump","Single Leg Hop","Sprint","Sled Push","Sled Pull","Tire Flip","Atlas Stone","Sandbag Carry","Yoke Walk","Log Press","Axle Press","Farmers Carry","Prowler Push"];
+const EXDB_FUNCTIONAL=["Burpees","Burpee Box Jump","Devil Press","Man Maker","Sandbag Clean","Sandbag Squat","Sandbag Lunge","Bear Crawl","Crawling","Crab Walk","Inchworm","Mountain Climbers","High Knees","Butt Kicks","Lateral Bound","Agility Ladder","Cone Drills","Battle Ropes","Rope Climbs","Rope Pull","Muscle Ups","Bar Muscle Up","Ring Muscle Up","Handstand Walk","Handstand Pushups","Pike Pushup","Ring Pushup","Ring Row","Ring Dips","L-Sit Pull Up","Archer Row","Front Lever","Back Lever","Human Flag","Planche Lean"];
+const EXDB_CARDIO=["Laufen","Sprint","Joggen","Rudern Ergometer","Skierg","Assault Bike","Cycling","Schwimmen","Ellipsentrainer","Stairmaster","Trampolin","Springseil","Box Step Up","Stepping","Inline Skaten","Nordic Walking","Bergsteigen","Hiking"];
+const EXDB_MOBILITY=["Foam Rolling Rücken","Foam Rolling Beine","Foam Rolling Schulter","Hüftbeuger Dehnung","Hüftöffner","Pigeon Pose","Figure Four","World's Greatest Stretch","Thorakale Extension","Schulter Dislocates","Pec Minor Stretch","Lat Stretch","Hamstring Stretch","Quadrizeps Stretch","Kälte Stretch","Wadendehnung","Nacken Dehnung","Schultermobilisation","Hip 90/90","Lizard Stretch","Deep Squat Hold","Ankle Circles","Wrist Mobility","Thorax Rotation","Kniebeuge Mobilisation","YTW","Band Shoulder Rotations","Scapula Pushup","Jefferson Curl","Inchworm Reach"];
+const EXDB_MILITARY=["Klimmzüge","Liegestütze","Sit Ups","Dips","Burpees","Box Jumps","Kettlebell Swing","Thruster","Wall Ball","Row Machine","Skierg","Assault Bike","Rope Climbs","Sandbag Run","Rucksack March","Obstacle Course","Combat Crawl","Grenade Throw","Tire Flip","Sled Push","Sprint Intervals","Shuttle Run","Beep Test","Cooper Test","Army Physical Fitness Test","Obstacle Swim","Long Distance Run","Ruck Run","Buddy Drag","Ammo Can Lift"];
+const EXDB=[
+  // ── BRUST ──────────────────────────────────────────────────────────────────
+  "Bankdrücken","Bankdrücken weiter Griff","Bankdrücken enger Griff",
+  "Schrägbankdrücken","Decline Bankdrücken","Flachbank KB-Drücken","Schrägbank KB-Drücken","Decline KB-Drücken",
+  "Dips","Trizeps Dips","Ring Dips","Parallelbarren Dips","Weighted Dips",
+  "Liegestütze","Liegestütze eng","Liegestütze breit","Liegestütze Diamant","Liegestütze Archer",
+  "Liegestütze Explosive","Liegestütze Rotation","Liegestütze Feet Elevated","Liegestütze Hands Elevated",
+  "Liegestütze Ring","Liegestütze Kurzhantel","Liegestütze Gewichtsweste","One-Arm Liegestütze",
+  "Pike Push-Up","Pseudo Planche Push-Up","Chest Press Maschine","Smith Machine Bankdrücken",
+  "Kabelfly flach","Kabelfly Schrägbank","Kabelfly Decline","Butterfly Maschine","Pec Deck",
+  "Dumbbell Fly","Incline Dumbbell Fly","Pullovers","Dumbbell Pullover","EZ-Bar Pullover",
+  // ── SCHULTERN ──────────────────────────────────────────────────────────────
+  "Schulterdrücken","Militärpress","Arnold Press","Push Press","Bradford Press","Z-Press",
+  "Seitheben","Seitheben Kabel","Seitheben Maschine","Frontheben","Frontheben Kabel","Frontheben EZ-Bar",
+  "Upright Row","Facepulls","Facepulls Seil","Landmine Press","Landmine Lateral Raise",
+  "Einarmiges Schulterdrücken","Cuban Press","Bent-Over Lateral Raise","Prone Y-T-W",
+  "Band Pull-Apart","Schulterkreisen Stab","Wall Slides","Scarecrow","External Rotation",
+  "Cable External Rotation","Cable Internal Rotation","Shoulder Dislocations",
+  // ── RÜCKEN ─────────────────────────────────────────────────────────────────
+  "Klimmzüge","Klimmzüge neutral","Klimmzüge weiter Griff","Klimmzüge Untergriff",
+  "Chinups","Kipping Pullups","Strict Pullups","Weighted Pullups","Band-Assisted Pullups",
+  "Muscle Ups","Chest-to-Bar Pullups","L-Sit Pullups",
+  "Lat Pulldown","Lat Pulldown eng","Lat Pulldown Untergriff","Lat Pulldown einarmig",
+  "Straight-Arm Pulldown","Kabelrudern","Kabelrudern hoch","Kabelrudern einarmig","Seated Row",
+  "Rudern Langhantel","Rudern Kurzhantel","Pendlay Row","Yates Row","Rudern T-Bar",
+  "Rudern aufrecht","Meadows Row","Dumbbell Row einarmig","Seal Row","Chest Supported Row",
+  "Rope Climbs","Rope Climbs einarmig","Inverted Row","Inverted Row Füße erhöht",
+  "Kreuzheben","Sumo Deadlift","Romanian Deadlift","Stiff-Leg Deadlift","Rack Pull",
+  "Trap Bar Deadlift","Block Pull","Deficit Deadlift","Paused Deadlift","Touch-and-Go Deadlift",
+  "Good Morning","Rückenextension","Hyperextension","GHD Rückenextension","Superman","Reverse Fly",
+  "Cable Reverse Fly","Bent-Over Reverse Fly","Reverse Fly Maschine",
+  // ── BIZEPS ─────────────────────────────────────────────────────────────────
+  "Bizeps Curls","Bizeps Curls EZ-Bar","Hammer Curls","Konzentrationscurls","Prediger Curl",
+  "Kabel Curls","Kabel Curl einarmig","Reverse Curls","Zottman Curl","Incline Curl",
+  "Spider Curl","21er Curls","Bizeps Maschine","Cross Body Curl","Bayesian Curl",
+  "Chin-Up Curl","Isometrischer Curl","Drag Curl","Waiter Curl","Behind-Back Wrist Curl",
+  // ── TRIZEPS ────────────────────────────────────────────────────────────────
+  "Trizeps Drücken","Trizeps Kabel Push-Down","Trizeps Kabel Push-Down Untergriff",
+  "Skull Crusher","EZ-Bar Skull Crusher","Trizeps Kickback","Trizeps Kickback Kabel",
+  "Enges Bankdrücken","Overhead Trizeps Verlängerung","Einarmige Overhead Verlängerung",
+  "JM Press","Rolling Trizeps Extension","Trizeps Dips","Bench Dips","Trizeps Maschine",
+  // ── BEINE QUAD ─────────────────────────────────────────────────────────────
+  "Kniebeugen","Frontkniebeugen","Box Squat","Zercher Squat","Safety Bar Squat",
+  "Goblet Squat","Goblet Squat Kettlebell","Hack Squat","Sissy Squat","Belt Squat",
+  "Bulgarian Split Squat","Ausfallschritte","Ausfallschritte gehend","Reverse Lunges",
+  "Seitwärts Ausfallschritte","Curtsy Lunges","Deficit Lunges","Weighted Lunges",
+  "Step Ups","Lateral Step Ups","Decline Step Ups","Box Step-Ups",
+  "Pistol Squat","Pistol Squat Box-Assisted","Shrimp Squat","Single Leg Squat",
+  "Beinpresse","Leg Press","Beinstrecker Maschine","Hack Squat Maschine",
+  "Air Squats","Jumping Squats","Jump Lunges","Squat Jump","Broad Jump",
+  // ── BEINE HAMS & GESÄSS ────────────────────────────────────────────────────
+  "Bein Curl liegend","Bein Curl sitzend","Nordic Curl","Glute Ham Raise","Slider Leg Curl",
+  "Romanian Deadlift einarmig","Single Leg Romanian Deadlift","Hip Hinge",
+  "Hip Thrust","Barbell Hip Thrust","Hip Thrust Maschine","Band Hip Thrust",
+  "Glute Bridge","Single Leg Glute Bridge","Weighted Glute Bridge","Frog Pumps",
+  "Donkey Kicks","Donkey Kick Kabel","Fire Hydrant","Clamshells","Monster Walks",
+  "Lateral Band Walks","Lateral Shuffle","45° Hüftextension","Back Extension",
+  "Sumo Squat","Cable Kickbacks","Kick Stance RDL","B-Stance Hip Thrust",
+  // ── WADEN ──────────────────────────────────────────────────────────────────
+  "Wadenheben stehend","Wadenheben sitzend","Einbeiniges Wadenheben","Tibiaheben",
+  "Donkey Calf Raise","Wadenheben Beinpresse","Wadenheben Maschine",
+  // ── HIP ADDUKTION & ABDUKTION ──────────────────────────────────────────────
+  "Leg Abduktion Maschine","Leg Adduktion Maschine","Copenhagen Planks","Copenhagen Adduktion",
+  "Side-Lying Hip Abduktion","Side-Lying Adduktion",
+  // ── CORE & BAUCH ───────────────────────────────────────────────────────────
+  "Plank","Seitstütz","Plank Schultertipp","Rocking Plank","Long Lever Plank","RKC Plank",
+  "Plank mit Gewicht","Plank Arm Extension","Plank Leg Lift",
+  "Ab Wheel","Ab Wheel kniend","Ab Wheel stehend","Dragon Flag","Hollow Body Hold","L-Sit",
+  "Tuck L-Sit","Straddle L-Sit","Hollow Body Rock","Superman Rock",
+  "Russian Twist","Weighted Russian Twist","Crunches","Kabelcrunch","Decline Crunches",
+  "Fahrrad Crunches","Reverse Crunches","Hanging Reverse Crunch","Toes to Bar",
+  "Knees to Chest","Hanging Knee Raise","Beinheben hängend","Beinheben liegend",
+  "V-Ups","V-Up Kick","Sit-Ups","Decline Sit-Ups","GHD Sit-Ups","Butterfly Sit-Ups",
+  "Cable Woodchop","Cable Woodchop tief-hoch","Pallof Press","Pallof Press Rotation",
+  "Dead Bug","Dead Bug Variation","Bird Dog","Copenhagen Plank","Stir the Pot",
+  "McGill Curl-Up","McGill Side Plank","Suitcase Hold","Loaded Carry Core",
+  // ── CARRIES ────────────────────────────────────────────────────────────────
+  "Farmers Walk","Farmers Carry Langhantel","Farmers Carry Kurzhantel","Farmers Carry Kettlebell",
+  "Suitcase Carry","Suitcase Carry Kurzhantel","Suitcase Carry Kettlebell",
+  "Trap Bar Carry","Onesided Trap Bar Carry","Trap Bar Farmers Walk",
+  "Zercher Carry","Zercher Walk","Sandbag Carry","Sandbag Shoulder Carry",
+  "Overhead Carry","Overhead Carry Kurzhantel","Overhead Carry Kettlebell","Bottoms-Up Carry",
+  "Cross Carry","Waiter Carry","Rack Carry","Double Rack Carry","Yoke Walk",
+  "Bear Hug Carry","Atlas Stone Carry","Log Carry","Keg Carry",
+  // ── OLYMPISCH & POWER ──────────────────────────────────────────────────────
+  "Clean","Power Clean","Hang Clean","Muscle Clean","Squat Clean","Split Clean",
+  "Snatch","Power Snatch","Hang Snatch","Muscle Snatch","Snatch Balance",
+  "Push Jerk","Split Jerk","Power Jerk","Clean & Jerk","Clean Pull","Snatch Pull",
+  "Overhead Squat","Behind-the-Neck Press","Tall Clean","Tall Snatch",
+  "Thruster","Wall Ball","Wall Ball Shot","Atlas Stone","Log Press","Axle Press",
+  "Keg Toss","Tire Flip","Sled Drag","Sled March","Sled Push","Sled Pull",
+  // ── KETTLEBELL ─────────────────────────────────────────────────────────────
+  "Kettlebell Swing","Kettlebell Swing einarmig","Hardstyle Swing","American Swing",
+  "Kettlebell Clean","Kettlebell Clean & Press","Kettlebell Snatch","Double KB Snatch",
+  "Kettlebell Press","Kettlebell Press einarmig","Double KB Press","Push Press Kettlebell",
+  "Turkish Get Up","Half Turkish Get Up","Kettlebell Goblet Squat","Double Front Squat KB",
+  "Kettlebell Row","Double KB Row","Renegade Row","Windmill","High Windmill",
+  "Halo","Bottoms-Up Press","Bottoms-Up Carry","Bottoms-Up Squat",
+  "Pistol Squat Kettlebell","Kettlebell Deadlift","Double KB Deadlift",
+  "Figure Eight","Around the World","Flip and Catch","Kneeling KB Press",
+  // ── CROSSFIT & MILITARY ────────────────────────────────────────────────────
+  "Burpees","Burpee Pull-Up","Burpee Box Jump","Burpee Chest-to-Bar","Bar Facing Burpee",
+  "Box Jumps","Box Step-Ups","Lateral Box Jumps","Seated Box Jumps","Depth Jumps",
+  "Assault Bike","Assault Bike Sprint","Skierg","Skierg Sprint","Ski Erg Double Pull",
+  "Rudern Ergometer","Rudern Ergometer Sprint","Air Rower",
+  "Battle Ropes","Battle Rope Waves","Battle Rope Slams","Battle Rope Circles",
+  "Ball Slams","Wall Balls","Slam Ball","Medicine Ball Throw","Med Ball Chest Pass",
+  "Ring Rows","Ring Pushups","Ring Dips","Ring Muscle Up","Banded Ring Rows",
+  "Muscle Ups","Chest-to-Bar Pullups","Strict Muscle Up",
+  "Handstand Pushups","Kipping Handstand Pushup","Pike Push-Up","Wall Walk","Handstand Walk",
+  "L-Sit","Tuck Planche","Planche Hold","Front Lever","Back Lever",
+  "Double Unders","Single Unders","Triple Unders",
+  "Bear Crawl","Crab Walk","Reverse Bear Crawl","Lateral Bear Crawl","Alligator Crawl",
+  "Broad Jump","Standing Long Jump","Lateral Bound","Single Leg Bound","Depth Drop",
+  "Air Squats","Jumping Jacks","High Knees","Butt Kicks","Mountain Climbers",
+  "Inchworm","Walkout","Spiderman Lunge","Hip Extension March","Knee Drive",
+  "GHD Sit-Ups","GHD Hip Extension","GHD Back Extension",
+  "Rope Climbs","Legless Rope Climbs","Rope Climbs einarmig","Rope Peg Board",
+  // ── AUSDAUER ───────────────────────────────────────────────────────────────
+  "Laufen","Sprinten","Tempolauf","Grundlagenausdauer Lauf","Intervall Laufen",
+  "Bergläufe","Treppenläufe","Traillauf","Fahrtspiel",
+  "Radfahren","Spinning","Radfahren Berg","Zeitfahren",
+  "Schwimmen","Crawl","Brust","Rücken","Schmetterling","Wechsellagen",
+  "Rudern Ergometer","Skierg","Assault Bike","Ellipsentrainer","Stepper","Treppensteiger",
+  "Crosstrainer","Springseil","Stair Climber",
+  // ── MOBILITY & PRÄVENTION ──────────────────────────────────────────────────
+  "Weltrekord-Stretch","90/90 Hip Stretch","Couch Stretch","Pigeon Pose","Lizard Pose",
+  "Jefferson Curl","Hip Flexor Dehnung","Pancake Stretch","Butterfly Stretch",
+  "Schulterkreisen","Brustdehnung","Thoraxrotation","Cat-Cow","Childs Pose","Thread the Needle",
+  "Kniebeuge Tiefengang","Ankle Circles","Ankle Dorsiflexion","Calf Stretch",
+  "Foam Rolling Quads","Foam Rolling IT-Band","Foam Rolling Rücken","Foam Rolling Hüfte",
+  "Lacrosse Ball Schulter","Faszienrolle Wade","Faszienrolle Hüftbeuger",
+  "Schulter Mobilisation","Hüftkreisen","Beckenkippen","Pelvic Tilt",
+  "Book Opener","Hip 90/90 Rotation","Seated Hip Stretch","Pirifomis Stretch",
+  "Hamstring Stretch liegend","Kniebeuger Dehnung stehend","Quad Stretch stehend",
+  "Side Stretch","Lat Stretch","Overhead Stretch","Chest Opener",
+  "Cervical Flexion","Cervical Rotation","Brügger-Übung","Schulterdehnung hinter Kopf",
+  "Wall Angels","Doorframe Stretch","Wrist Circles","Finger Stretches",
+
+  // ── UNILATERAL BRUST ───────────────────────────────────────────────────────
+  "Einarmiges KB-Bankdrücken","Einarmiges KB-Schrägbankdrücken","Einarmiges Kabel-Fly",
+  "Single Arm Dumbbell Press","Single Arm Incline Dumbbell Press","Single Arm Decline Press",
+  "Unilateral Chest Press Maschine","Landmine Single Arm Press","Single Arm Push-Up",
+  // ── UNILATERAL SCHULTERN ───────────────────────────────────────────────────
+  "Einarmiges Seitheben","Einarmiges Frontheben","Einarmiger Arnold Press",
+  "Single Arm Cable Lateral Raise","Single Arm Cable Front Raise","Single Arm Facepull",
+  "Einarmiger Landmine Press","Einarmige Schulterdrücken","Single Arm Z-Press",
+  // ── UNILATERAL RÜCKEN ──────────────────────────────────────────────────────
+  "Einarmiger Lat Pulldown","Single Arm Cable Row","Einarmiges Kabelrudern",
+  "Single Arm DB Row","Kroc Row","Renegade Row","Meadows Row","Single Arm Pendlay Row",
+  "Einarmiges Rudern T-Bar","Single Arm Seated Row","Unilateral Chest Supported Row",
+  "Single Arm Straight-Arm Pulldown","Single Arm Pullover",
+  // ── UNILATERAL BIZEPS ──────────────────────────────────────────────────────
+  "Einarmiger Hammer Curl","Einarmiger Konzentrationscurl","Single Arm Cable Curl",
+  "Einarmiger Prediger Curl","Single Arm Reverse Curl","Einarmiger Drag Curl",
+  "Einarmiger Bayesian Curl","Single Arm Spider Curl","Einarmiger Zottman Curl",
+  // ── UNILATERAL TRIZEPS ─────────────────────────────────────────────────────
+  "Einarmiger Trizeps Push-Down","Single Arm Overhead Verlängerung","Einarmiger KB Trizeps",
+  "Single Arm Skull Crusher","Einarmiger Kickback","Single Arm JM Press",
+  // ── UNILATERAL BEINE ───────────────────────────────────────────────────────
+  "Einbeinige Beinpresse","Single Leg Beinstrecker","Einbeiniger Bein Curl",
+  "Single Leg RDL Kurzhantel","Single Leg RDL Langhantel","Single Leg RDL Kettlebell",
+  "Einbeiniger Hip Thrust","Single Leg Glute Bridge","Einbeinige Wadenheben",
+  "Single Leg Squat Box","Einbeiniger Step Up","Single Leg Good Morning",
+  "Einbeinige Rückenextension","Single Leg Deadlift","Bulgarian Split Squat KB",
+  "Bulgarian Split Squat KH","Shrimp Squat","Skater Squat","Slider Squat",
+  // ── KABELÜBUNGEN ───────────────────────────────────────────────────────────
+  "Kabel Chest Fly tief-hoch","Kabel Chest Fly hoch-tief","Kabel Crossover",
+  "Kabel Pull-Through","Kabel Hip Hinge","Kabel Squat","Kabel Abduktion stehend",
+  "Kabel Adduktion stehend","Kabel Kickback","Kabel Donkey Kick",
+  "Low Cable Row","High Cable Row","Cable Upright Row","Kabel Shrug",
+  "Cable Hip Thrust","Cable Deadlift","Cable RDL","Cable Pull-Apart",
+  "Kabel Woodchop diagonal","Cable Oblique Crunch","Kabel Rotation",
+  "Face Pull Rope","Kabel Reverse Fly stehend","Cable W-Raise","Cable Y-Raise",
+  // ── MASCHINENÜBUNGEN ───────────────────────────────────────────────────────
+  "Smith Machine Squat","Smith Machine RDL","Smith Machine Hip Thrust",
+  "Smith Machine Schulterdrücken","Smith Machine Rudern","Smith Machine Shrug",
+  "Smith Machine Calf Raise","Pendulum Squat","Leg Press 45°",
+  "Hack Squat Maschine","Seated Leg Curl","Prone Leg Curl",
+  "Leg Extension Maschine","Adduktor Maschine","Abduktor Maschine",
+  "Chest Press Maschine einarmig","Shoulder Press Maschine","Lat Pulldown Maschine",
+  "T-Bar Row Maschine","Low Row Maschine","High Row Maschine",
+  "Pec Deck einarmig","Bicep Curl Maschine","Tricep Extension Maschine",
+  "Glute Drive Maschine","Hip Abduction Maschine","Hip Adduction Maschine",
+  "Seated Calf Raise Maschine","Standing Calf Raise Maschine","Back Extension Maschine",
+  "Ab Crunch Maschine","Rotary Torso Maschine","Gravitron Pullup",
+  // ── BAND-ÜBUNGEN ───────────────────────────────────────────────────────────
+  "Band Squat","Band Deadlift","Band Hip Thrust","Band Pull-Apart",
+  "Band Chest Press","Band Shoulder Press","Band Row","Band Lat Pulldown",
+  "Band Bicep Curl","Band Tricep Pushdown","Band Kickback","Band Clamshell",
+  "Band Monster Walk","Band Abduktion","Band Adduktion","Band Face Pull",
+  "Band External Rotation","Band Internal Rotation","Band Good Morning",
+  "Band Pallof Press","Band Woodchop","Band Glute Bridge","Band Terminal Knee Extension",
+  // ── HANTELBANK VARIANTEN ───────────────────────────────────────────────────
+  "Close Grip Bench Press","Reverse Grip Bench Press","Floor Press","Floor Press KB",
+  "Board Press","Spoto Press","Paused Bench Press","Pin Press",
+  "Incline Bench Press 30°","Incline Bench Press 45°","Incline Bench Press 60°",
+  "Decline Bench Press Maschine","Guillotine Press","Neck Press",
+  // ── KNIEBEUGEN VARIANTEN ───────────────────────────────────────────────────
+  "Anderson Squat","Paused Squat","Tempo Squat","1.5 Rep Squat","Pin Squat",
+  "Chains Squat","Bands Squat","Zombie Squat","Overhead Squat","Narrow Stance Squat",
+  "Wide Stance Squat","Heels Elevated Squat","Toes Elevated Squat",
+  "Landmine Squat","Landmine Hack Squat","Goblet Pause Squat",
+  // ── KREUZHEBEN VARIANTEN ───────────────────────────────────────────────────
+  "Paused Deadlift","Tempo Deadlift","Snatch Grip Deadlift","Wide Stance Deadlift",
+  "Conventional Deadlift enges Griff","Deficit Sumo Deadlift","Romanian Deadlift Pause",
+  "Single Leg Deadlift","B-Stance Deadlift","Landmine Deadlift","KB Deadlift",
+  "Double KB Deadlift","Hex Bar Deadlift","Anderson Deadlift",
+  // ── HÜFT-SCHARNIER VARIANTEN ──────────────────────────────────────────────
+  "American Deadlift","45° Back Extension","Belt Squat Hip Hinge",
+  "Cable Pull-Through","Landmine Hip Hinge","KB Hip Hinge","Single Arm KB Hinge",
+  "Barbell Hip Hinge","Good Morning Squat","Good Morning seated",
+  // ── PUSH-VARIANTEN ─────────────────────────────────────────────────────────
+  "Dumbbell Chest Press","Incline Dumbbell Chest Press","Decline Dumbbell Chest Press",
+  "Dumbbell Chest Press einarmig","Incline Dumbbell Press einarmig",
+  "Landmine Chest Press","Svend Press","Plate Press","Medicine Ball Push-Up",
+  "Suspended Push-Up TRX","Ring Push-Up","Deficit Push-Up","Weighted Push-Up",
+  // ── TRX / SUSPENSION ──────────────────────────────────────────────────────
+  "TRX Row","TRX Chest Press","TRX Push-Up","TRX Squat","TRX Lunge",
+  "TRX Hip Press","TRX Hamstring Curl","TRX Plank","TRX Rollout","TRX Fallout",
+  "TRX Bicep Curl","TRX Tricep Extension","TRX Fly","TRX Y-Row","TRX W-Row",
+  "TRX Single Leg Squat","TRX Pistol Squat","TRX Mountain Climber",
+  // ── PLYOMETRIE ─────────────────────────────────────────────────────────────
+  "Drop Jump","Depth Drop","Depth Jump","Reaktionskraft Sprung","Split Jump",
+  "Lateral Jump","Single Leg Jump","Skater Jump","Long Jump","Triple Jump",
+  "Bounding","Hopping","Skip A","Skip B","High Skip","Power Skip",
+  "Lateral Bound","Diagonal Jump","Hurdle Jump","Cone Drill","T-Drill","5-10-5 Drill",
+  // ── CORE FORTGESCHRITTEN ──────────────────────────────────────────────────
+  "Hanging L-Sit","Tuck Hold","Tuck L-Sit Hang","Straddle L-Hang",
+  "Windshield Wiper","Hanging Windshield Wiper","Human Flag","Side Human Flag",
+  "Ab Wheel Pike","Ab Wheel Straddle","Gymnastic Hollow","Arch Body Hold",
+  "Reverse Plank","Reverse Plank with Leg Raise","Suitcase Deadlift",
+  "Copenhagen Adduktor","Side Plank with Hip Dip","Side Plank Rotation",
+  "Pallof Press isometrisch","Kabel Pallof Rotation","Half-Kneeling Pallof",
+  // ── GRIP & UNTERARME ──────────────────────────────────────────────────────
+  "Wrist Curl","Reverse Wrist Curl","Wrist Roller","Plate Pinch","Hub Lift",
+  "Towel Pull-Up","Fat Grip Curl","Axle Curl","Grippers","Sand Bucket",
+  "Finger Extension","Rice Bucket","Newspaper Crumple","Wrist Figure Eight",
+  // ── NECK & TRAPS ──────────────────────────────────────────────────────────
+  "Shrug Langhantel","Shrug Kurzhantel","Shrug Kabel","Shrug Maschine",
+  "Behind-Back Shrug","Single Arm Shrug","Rack Pull Shrug","Neck Bridge",
+  "Neck Curl vorne","Neck Extension hinten","Neck Lateral Flexion","Neck Harness",
+  // ── KONDITIONIERUNG ───────────────────────────────────────────────────────
+  "Sandbag Squat","Sandbag Lunge","Sandbag Shoulder","Sandbag Bear Hug Squat",
+  "Sandbag Bearhug Carry","Sandbag Clean","Sandbag Thruster","Sandbag Rotational Toss",
+  "Keg Press","Keg Squat","Keg Toss","Stone to Shoulder","Stone Over Bar",
+  "Prowler Push","Prowler Pull","Car Push","Manmaker","Complex Workout",
+  "Barbell Complex","Dumbbell Complex","Kettlebell Complex",
+  // ── SPORT-SPEZIFISCH MILITARY ─────────────────────────────────────────────
+  "Fireman Carry","Drag Rescue","Casualty Drag","Ammunition Box Lift",
+  "Obstacle Course","Rope Bridge","Mud Crawl","Sprint mit Gewichtsweste",
+  "Marschieren mit Gepäck","Ruck March","Loaded March","Hügelsprints mit Last",
+  "Trailrun mit Rucksack","Step-Up mit Last","Überkopfwurf","Medizinball Stoß",
+  // ── SCHWIMMEN VARIANTEN ───────────────────────────────────────────────────
+  "Schwimmen Crawl","Schwimmen Brust","Schwimmen Rücken","Schwimmen Schmetterling",
+  "Schwimmen Wechsellagen","Schwimmen Sprint","Schwimmen Langstrecke","Tauchen",
+  // ── KAMPFSPORT ────────────────────────────────────────────────────────────
+  "Schattenboxen","Boxen Sandsack","Pad Work","Sparring","Clinch Training",
+  "Grappling","Wrestling","BJJ Drilling","Submission Grappling","Judo Nage Komi",
+  "Takedown Practice","Guard Pass Drilling","Muay Thai Technique","Kickboxen",
+  "Karate Kata","Taekwondo Formen","Sandsack Tritte","Tiefkicks","Körpertritte"
+].filter(function(v,i,a){return a.indexOf(v)===i;}).sort().sort().sort((a,b)=>a.localeCompare(b,"de"));
+const ACT_KEY="sfp_act3";
+const ACTIVITY_TYPES=[{id:"laufen",label:"Laufen",icon:"🏃",met:9.8},{id:"radfahren",label:"Radfahren",icon:"🚴",met:7.5},{id:"schwimmen",label:"Schwimmen",icon:"🏊",met:8.0},{id:"krafttraining",label:"Krafttraining",icon:"💪",met:5.0},{id:"hiit",label:"HIIT",icon:"⚡",met:10.0},{id:"yoga",label:"Yoga",icon:"🧘",met:2.5},{id:"wandern",label:"Wandern",icon:"🥾",met:5.5},{id:"fussball",label:"Fußball",icon:"⚽",met:8.0},{id:"kampfsport",label:"Kampfsport",icon:"🥊",met:9.0},{id:"sonstiges",label:"Sonstiges",icon:"🏅",met:5.0}];
+function hms(s){if(!s&&s!==0)return"—";const t=Math.round(Math.abs(s));const h=Math.floor(t/3600);const m=Math.floor((t%3600)/60);const sc=t%60;if(h>0)return h+":"+String(m).padStart(2,"0")+":"+String(sc).padStart(2,"0");return m+":"+String(sc).padStart(2,"0");}
+function m2h(m){return hms(Math.round((m||0)*60));}
+function p2m(s){if(!s&&s!==0)return 0;const p=String(s).trim().split(":").map(Number);if(p.length===3)return p[0]*60+p[1]+p[2]/60;if(p.length===2)return p[0]*60+p[1];return parseFloat(s)||0;}
+function fn(n){if(n===undefined||n===null||n==="")return"—";const x=parseFloat(n);if(isNaN(x))return"—";return x%1===0?String(Math.round(x)):x.toFixed(1).replace(".",",");}
+const fd=iso=>new Date(iso).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"});
+const fdl=iso=>new Date(iso).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"});
+function scoreSession(s){const i=s.intensity||5,dur=p2m(s.duration_raw)||s.duration||30;const vol=(s.exercises||[]).reduce((a,e)=>a+(e.sets||0)*(typeof e.reps==="number"?e.reps:parseInt(e.reps)||0)*(e.weight||75),0);return Math.round(Math.min(100,(i/10)*40+Math.min(vol/5000,1)*35+Math.min(dur>0?vol/dur/200:0,1)*25));}
+function calcFL(sessions,cur){const perf=sessions.filter(s=>!/mobility/i.test(s.category||"")&&(s.intensity||0)>=4);if(!perf.length)return cur;const scores=[...perf.slice(-30)].map(s=>s.perf_score!=null?s.perf_score:scoreSession(s)).sort((a,b)=>b-a);const top=scores.slice(0,Math.max(1,Math.ceil(scores.length*0.5)));const peak=top.reduce((a,b)=>a+b,0)/top.length;const wk=perf.filter(s=>(Date.now()-new Date(s.date))/86400000<=7).length;const target=Math.min(100,Math.max(1,peak*0.65+cur*0.28+Math.min(wk/4,1)*7));const d=target-cur;return Math.round(Math.min(100,Math.max(1,cur+(d>0?d:Math.max(d,-1.5)))));}
+function flInfo(l){if(l<15)return{label:"Einsteiger",color:G4};if(l<30)return{label:"Beginner",color:G5};if(l<45)return{label:"Intermediär",color:G};if(l<60)return{label:"Fortgeschritten",color:G2};if(l<75)return{label:"Leistungssportler",color:G3};if(l<90)return{label:"Athlet",color:"#bbf7d0"};return{label:"Elite",color:"#f0fdf4"};}
+function calcRecovery(sessions,sleep,fl){const now=Date.now(),l3=sleep.filter(s=>(now-new Date(s.date))/86400000<=3),l7=sessions.filter(s=>(now-new Date(s.date))/86400000<=7);let sc=100,warn=[],mod=0;if(l3.length>=2){const h=l3.filter(s=>s.hrv>0).map(s=>s.hrv);if(h.length>=2){const drop=((h[0]-h[h.length-1])/h[0])*100;if(drop>20){warn.push("⚠️ HRV stark gesunken");sc-=30;mod-=2;}else if(drop>10){warn.push("⚡ HRV leicht gesunken");sc-=15;mod-=1;}}}if(l3.length>0){const a=l3.reduce((a,s)=>a+(s.sleep_score||70),0)/l3.length;if(a<55){warn.push("😴 Schlechter Schlaf");sc-=25;mod-=2;}else if(a<70){warn.push("😐 Mittelmäßiger Schlaf");sc-=10;mod-=1;}}const lvl=fl||42;const volTolerance=lvl<30?30:lvl<50?40:lvl<70?50:lvl<85?60:75;const weekVol=l7.reduce((a,s)=>a+(s.intensity||0),0);if(weekVol>volTolerance){warn.push("🔥 Hohe Belastung (FL "+lvl+")");sc-=Math.round((weekVol-volTolerance)/2);mod-=1;}const recDaysNeeded=lvl>=80?1:lvl>=60?1.5:lvl>=40?2:2.5;const lastPerf=[...sessions].filter(s=>!/mobility/i.test(s.category||"")&&(s.intensity||0)>=6).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];if(lastPerf){const daysSince=(now-new Date(lastPerf.date))/86400000;if(daysSince<recDaysNeeded){warn.push("⏱ Letzte Einheit vor "+daysSince.toFixed(1)+"T");sc-=15;}}const r=Math.max(0,sc);const maxSessPerWeek=lvl>=80?6:lvl>=60?5:lvl>=40?4:3;return{score:r,warn,rec:r>=85?"PUSH IT":r>=65?"NORMAL":r>=45?"DELOAD":"RECOVERY",mod,recDaysNeeded,maxSessPerWeek,weekSessions:l7.length};}
+function classifyEx(ex){const reps=typeof ex.reps==="number"?ex.reps:parseInt(ex.reps)||0,sets=ex.sets||0,w=ex.weight||0;return{hyp:reps>=6&&reps<=15?1:reps>15?0.4:0.1,maxK:reps<=5?1:reps===6?0.6:0,schnell:sets>=3&&reps<=6&&w>0?0.9:0,kausd:reps>=15?1:reps>=12?0.6:reps>=10?0.3:0};}
+function axisScore(sessions,key){const vals=sessions.slice(-15).map(s=>{const exs=s.exercises||[];if(!exs.length)return 0;return Math.min(1,exs.reduce((a,e)=>a+classifyEx(e)[key],0)/Math.max(exs.length,1));}).filter(v=>v>0);return vals.length?Math.min(100,Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100)):0;}
+function detectPRs(s,all){return(s.exercises||[]).flatMap(ex=>{if(!ex.name)return[];const prev=all.flatMap(x=>x.exercises||[]).filter(e=>e.name&&e.name.toLowerCase()===ex.name.toLowerCase());const mw=Math.max(0,...prev.map(e=>e.weight||0)),mv=Math.max(0,...prev.map(e=>(e.sets||0)*(e.reps||0)));const nv=(ex.sets||0)*(typeof ex.reps==="number"?ex.reps:parseInt(ex.reps)||0);if(ex.weight>0&&ex.weight>mw)return[{type:"WEIGHT PR",exercise:ex.name,value:ex.weight+"kg",prev:mw+"kg"}];if(nv>mv&&nv>0)return[{type:"VOLUMEN PR",exercise:ex.name,value:nv+" Wdh",prev:mv+" Wdh"}];return[];});}
+function estimateVO2max(hrMax,hrRest){if(!hrMax||!hrRest||hrRest<=0)return null;return Math.round(15*(hrMax/hrRest));}
+function calcTrainingEffect(hrAvg,hrMax,durMin,isInterval){if(!hrAvg||!hrMax||hrAvg<=0||hrMax<=0)return{aerob:null,anaerob:null};const hrMaxAge=190;const pctAvg=hrAvg/hrMaxAge,pctMax=hrMax/hrMaxAge,dur=durMin||30;const durMod=dur<20?-0.5:dur<40?0:dur<60?0.3:0.6;const aeroBase=pctAvg<0.60?0.8:pctAvg<0.70?1.7:pctAvg<0.80?2.8:pctAvg<0.90?3.8:4.5;const aerob=Math.min(5,Math.max(0.5,+(aeroBase+durMod).toFixed(1)));const anaBase=pctMax<0.80?0.3:pctMax<0.85?0.8:pctMax<0.90?1.8:pctMax<0.95?2.8:3.8;const anaerob=Math.min(5,Math.max(0,+(anaBase+(isInterval?0.8:0)).toFixed(1)));return{aerob,anaerob};}
+function parseEx(txt){if(!txt||!txt.trim())return[];return txt.split("\n").filter(l=>l.trim()).map(line=>{const l=line.trim();let m=l.match(/^(.+?)\s*[-\u2013:]\s*(\d+)\s*[x\u00d7X]\s*(\d+(?:[,.]?\d+)?)\s*(?:@|bei)?\s*([\d,.]+)?\s*(?:kg)?(.*)$/i);if(m)return{name:m[1].trim(),sets:+m[2],reps:parseFloat(m[3].replace(",","."))||0,weight:m[4]?parseFloat(m[4].replace(",","."))||0:0,notes:(m[5]||"").trim()};m=l.match(/^(.+?)\s+(\d+)\s*[x\u00d7X]\s*(\d+(?:[,.]?\d+)?)\s*([\d,.]+)?\s*(?:kg)?(.*)$/i);if(m)return{name:m[1].trim(),sets:+m[2],reps:parseFloat(m[3].replace(",","."))||0,weight:m[4]?parseFloat(m[4].replace(",","."))||0:0,notes:(m[5]||"").trim()};return{name:l,sets:0,reps:0,weight:0,notes:""};}); }
+function phLabel(v){if(v<=-0.8)return{label:"Extreme Definition",short:"EXTREME DEF",col:"#ef4444"};if(v<=-0.4)return{label:"Definitionsphase",short:"DEFINITION",col:"#fb923c"};if(v<=-0.1)return{label:"Leichtes Defizit",short:"LEICHT -",col:"#facc15"};if(v<=0.1)return{label:"Erhalt / Recomp",short:"ERHALT",col:G};if(v<=0.4)return{label:"Leichter Aufbau",short:"LEICHT +",col:G2};if(v<=0.8)return{label:"Aufbauphase",short:"AUFBAU",col:"#a78bfa"};return{label:"Extreme Bulk",short:"EXTREME BULK",col:"#f472b6"};}
+function dayTgt(kg,phase,todaySess,macroRatios,steps,floors,extraBurn){const w=kg||85;const pr=macroRatios||{protLo:1.8,protHi:2.2,fatLo:0.8,fatHi:1.0};const protMid=(pr.protLo+pr.protHi)/2,fatMid=(pr.fatLo+pr.fatHi)/2;const prot=Math.round(w*protMid),fat=Math.round(w*fatMid);const bmr=10*w+6.25*H-5*30+5;const hasRealData=steps>0||floors>0||(extraBurn||0)>0;let tdee,actLabel;if(!hasRealData){const defKcal=Math.round(7000*0.000175*3.5*w);tdee=Math.round(bmr*1.2+defKcal);actLabel="🏃 Ø 7.000 Schritte";}else{const stepKcal=Math.round((steps||0)*0.000175*3.5*w);const floorKcal=Math.round((floors||0)*6.8*w*3.5*0.5/200);const s2=steps||0;tdee=Math.round(bmr*1.2+stepKcal+floorKcal+(extraBurn||0));actLabel=s2<3000?"💺 Sitzend":s2<6000?"🚶 Leicht":s2<9000?"🏃 Moderat":s2<12000?"⚡ Aktiv":"🔥 Sehr aktiv";}const phOff=phase<0?Math.round(phase*600):Math.round(phase*400);let sMod=0;if(todaySess){const cat=todaySess.category||"";if(/kraft|intervall_mil/i.test(cat))sMod=150;else if(/ausdauer|intervall_aus|fussball|kampf/i.test(cat))sMod=250;}const kcal=Math.max(1200,Math.round(tdee+phOff+sMod)),carbs=Math.round(Math.max(0,kcal-prot*4-fat*9)/4);return{kcal,prot,fat,carbs,fiber:35,tdee,bmr,phOff,sMod,actLabel,protLo:Math.round(w*pr.protLo),protHi:Math.round(w*pr.protHi),fatLo:Math.round(w*pr.fatLo),fatHi:Math.round(w*pr.fatHi)};}
+function calcActivityKcal(steps,floors,activities,weight){const w=weight||80;const stepKcal=Math.round((steps||0)*0.000175*3.5*w);const floorKcal=Math.round((floors||0)*6.8*w*3.5*0.5/200);const actKcal=(activities||[]).reduce((a,act)=>{const type=ACTIVITY_TYPES.find(t=>t.id===act.type);return a+Math.round(((type?type.met:5)*(w/60)*((act.duration||30)/60)));},0);return{stepKcal,floorKcal,actKcal,total:stepKcal+floorKcal+actKcal};}
+function Lbl(p){return React.createElement("div",{style:{color:G4,fontSize:"9px",letterSpacing:"2.5px",fontFamily:M,marginBottom:"5px",...(p.s||{})}},p.c);}
+function Card(p){return React.createElement("div",{style:{background:BG3,border:"1px solid "+G4,borderLeft:p.al?"3px solid "+p.al:undefined,borderRadius:"6px",padding:"12px 14px",marginBottom:"9px",...(p.style||{})}},p.children);}
+function Btn(p){const bc=p.col||G;return React.createElement("button",{onClick:p.onClick,disabled:p.disabled,style:{width:p.full?"100%":"auto",padding:p.small?"5px 10px":"9px 16px",background:bc+"18",border:"1px solid "+bc,borderRadius:"4px",color:bc,fontFamily:C,fontSize:p.small?"10px":"12px",letterSpacing:"1.5px",fontWeight:700,cursor:p.disabled?"not-allowed":"pointer",opacity:p.disabled?0.45:1}},p.children);}
+function PRBanner(p){if(!p.prs||!p.prs.length)return null;return <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.92)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",padding:"28px",maxWidth:"300px"}}><div style={{fontSize:"44px",marginBottom:"8px"}}>🏆</div><div style={{color:G2,fontFamily:C,fontSize:"24px",fontWeight:900,marginBottom:"14px"}}>NEUE BESTLEISTUNG!</div>{p.prs.map((pr,i)=><div key={i} style={{background:G4+"30",border:"1px solid "+G4,borderRadius:"7px",padding:"9px 13px",marginBottom:"7px"}}><div style={{color:G4,fontSize:"8px",fontFamily:M}}>{pr.type}</div><div style={{color:G3,fontFamily:C,fontSize:"17px",fontWeight:800}}>{pr.exercise.toUpperCase()}</div><div style={{color:G,fontFamily:M,fontSize:"13px",fontWeight:700}}>{pr.value}</div></div>)}<button onClick={p.onClose} style={{marginTop:"12px",padding:"9px 26px",background:G4+"25",border:"1px solid "+G,borderRadius:"5px",color:G2,fontFamily:C,fontSize:"12px",fontWeight:700,cursor:"pointer"}}>WEITER ⚡</button></div></div>;}
+function ExInput(p){const[sugs,setSugs]=useState([]);const[open,setOpen]=useState(false);function handle(v){p.onChange(v);const s=EXDB.filter(e=>e.toLowerCase().includes(v.toLowerCase())).slice(0,7);setSugs(s);setOpen(s.length>0&&v.length>=2);}return <div style={{position:"relative"}}><input value={p.value} onChange={e=>handle(e.target.value)} onBlur={()=>setTimeout(()=>setOpen(false),150)} placeholder={p.placeholder||"Übungsname..."} style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 8px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/>{open&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:BG2,border:"1px solid "+G4,borderRadius:"4px",zIndex:50,marginTop:"2px"}}>{sugs.map((s,i)=><div key={i} onClick={()=>{p.onChange(s);setOpen(false);}} style={{padding:"7px 10px",color:G3,fontFamily:M,fontSize:"11px",cursor:"pointer",borderBottom:"1px solid "+G4+"30"}}>{s}</div>)}</div>}</div>;}
+
+
+
+// ── MUSKELKARTE ───────────────────────────────────────────────────────────────
+const MUSCLE_KEYWORDS={
+  chest:["bankdrücken","bench","chest press","liegestütze","push-up","pushup","fly","butterfly","pec","dips","crossover","pullover"],
+  front_delt:["schulterdrücken","military","overhead press","arnold","push press","frontheben","front raise","z-press","landmine"],
+  lateral_delt:["seitheben","lateral raise","upright row"],
+  rear_delt:["facepull","face pull","reverse fly","rear delt","bent-over lateral"],
+  traps:["shrug","facepull","upright row","clean","snatch","kreuzheben","deadlift","carry","farmers","yoke","rack pull","row","rudern"],
+  lats:["klimmzüge","chin","pullup","pull-up","lat pulldown","rudern","row","rope climb","snatch","clean","straight-arm"],
+  upper_back:["row","rudern","reverse fly","facepull","band pull","rhomboid"],
+  lower_back:["kreuzheben","deadlift","good morning","rückenextension","hyperextension","superman","back extension","suitcase","rdl","romanian"],
+  biceps:["bizeps","curl","chinup","chin-up","klimmzüge","hammer curl","row","rudern"],
+  triceps:["trizeps","skull crusher","push-down","dips","liegestütze","push-up","close grip","overhead verlängerung","kickback","jm press"],
+  forearms:["farmers","carry","suitcase","wrist","forearm","curl","hammer","zercher"],
+  abs:["plank","crunch","sit-up","ab wheel","toes to bar","beinheben","leg raise","dragon flag","hollow","dead bug","v-up","russian twist","pallof","hanging"],
+  obliques:["russian twist","woodchop","seitstütz","side plank","pallof","suitcase carry","cable rotation"],
+  hip_flexors:["beinheben","leg raise","toes to bar","hanging knee","hip flexor"],
+  quads:["kniebeugen","squat","beinpresse","leg press","ausfallschritte","lunge","step up","bulgarian","hack squat","beinstrecker","thruster","wall ball","box jump","clean","snatch","pistol"],
+  hamstrings:["romanian","rdl","leg curl","nordic","glute ham","stiff-leg","good morning","kreuzheben","deadlift","hip hinge","b-stance"],
+  glutes:["hip thrust","glute bridge","kniebeugen","squat","ausfallschritte","lunge","romanian","rdl","kreuzheben","deadlift","donkey kick","kickback","bulgarian","step up","kettlebell swing","swing"],
+  calves:["wadenheben","calf raise","tibia","laufen","radfahren","sprinten","box jump"],
+};
+
+const CAT_MUSCLES={
+  ausdauer:{quads:2,hamstrings:2,calves:2,glutes:1,abs:1},
+  intervall_aus:{quads:3,hamstrings:3,calves:2,glutes:2,abs:2,hip_flexors:1},
+  fussball:{quads:3,hamstrings:2,calves:2,glutes:2,abs:2,obliques:1},
+  kampfsport:{abs:3,obliques:3,hip_flexors:2,front_delt:2,biceps:1,triceps:1,quads:2,calves:1},
+  intervall_mil:{abs:3,quads:3,glutes:2,calves:2,front_delt:2,chest:2,traps:1},
+  kraft_upper:{chest:2,front_delt:2,lateral_delt:1,lats:2,biceps:2,triceps:2,traps:1},
+  kraft_lower:{quads:3,hamstrings:2,glutes:3,calves:1,lower_back:2,abs:1},
+  kraft_full:{quads:2,glutes:2,chest:2,lats:2,biceps:1,triceps:1,lower_back:1,abs:1},
+};
+
+// Primary/secondary muscle role map per exercise keyword
+const MUSCLE_ROLES={
+  "bankdrücken":{p:["chest"],s:["front_delt","triceps"]},
+  "bench":{p:["chest"],s:["front_delt","triceps"]},
+  "chest press":{p:["chest"],s:["front_delt","triceps"]},
+  "liegestütze":{p:["chest","triceps"],s:["front_delt","abs"]},
+  "push-up":{p:["chest","triceps"],s:["front_delt","abs"]},
+  "pushup":{p:["chest","triceps"],s:["front_delt","abs"]},
+  "dips":{p:["chest","triceps"],s:["front_delt"]},
+  "fly":{p:["chest"],s:["front_delt"]},
+  "butterfly":{p:["chest"],s:["front_delt"]},
+  "pec":{p:["chest"],s:[]},
+  "schulterdrücken":{p:["front_delt","lateral_delt"],s:["traps","triceps"]},
+  "military":{p:["front_delt","lateral_delt"],s:["traps","triceps"]},
+  "overhead press":{p:["front_delt","lateral_delt"],s:["traps","triceps"]},
+  "arnold":{p:["front_delt","lateral_delt","rear_delt"],s:["triceps"]},
+  "push press":{p:["front_delt","lateral_delt"],s:["quads","triceps"]},
+  "frontheben":{p:["front_delt"],s:["lateral_delt"]},
+  "front raise":{p:["front_delt"],s:["lateral_delt"]},
+  "seitheben":{p:["lateral_delt"],s:["traps"]},
+  "lateral raise":{p:["lateral_delt"],s:["traps"]},
+  "facepull":{p:["rear_delt","traps"],s:["upper_back"]},
+  "face pull":{p:["rear_delt","traps"],s:["upper_back"]},
+  "upright row":{p:["lateral_delt","traps"],s:["biceps"]},
+  "reverse fly":{p:["rear_delt"],s:["upper_back","traps"]},
+  "shrug":{p:["traps"],s:[]},
+  "klimmzüge":{p:["lats","biceps"],s:["upper_back","rear_delt"]},
+  "chin":{p:["lats","biceps"],s:["upper_back"]},
+  "pullup":{p:["lats","biceps"],s:["upper_back","rear_delt"]},
+  "pull-up":{p:["lats","biceps"],s:["upper_back","rear_delt"]},
+  "lat pulldown":{p:["lats"],s:["biceps","upper_back"]},
+  "rudern":{p:["lats","upper_back"],s:["biceps","rear_delt","traps"]},
+  "row":{p:["lats","upper_back"],s:["biceps","rear_delt","traps"]},
+  "rope climb":{p:["lats","biceps"],s:["forearms","abs"]},
+  "kreuzheben":{p:["lower_back","glutes","hamstrings"],s:["traps","lats","quads"]},
+  "deadlift":{p:["lower_back","glutes","hamstrings"],s:["traps","lats","quads"]},
+  "rdl":{p:["hamstrings","glutes"],s:["lower_back"]},
+  "romanian":{p:["hamstrings","glutes"],s:["lower_back"]},
+  "good morning":{p:["lower_back","hamstrings"],s:["glutes"]},
+  "rückenextension":{p:["lower_back"],s:["glutes","hamstrings"]},
+  "hyperextension":{p:["lower_back"],s:["glutes","hamstrings"]},
+  "bizeps":{p:["biceps"],s:["forearms"]},
+  "bicep":{p:["biceps"],s:["forearms"]},
+  "curl":{p:["biceps"],s:["forearms","brachialis"]},
+  "hammer curl":{p:["biceps","brachialis"],s:["forearms"]},
+  "trizeps":{p:["triceps"],s:[]},
+  "skull crusher":{p:["triceps"],s:[]},
+  "push-down":{p:["triceps"],s:[]},
+  "overhead verlängerung":{p:["triceps"],s:[]},
+  "kickback":{p:["triceps"],s:[]},
+  "jm press":{p:["triceps"],s:["chest"]},
+  "close grip":{p:["triceps"],s:["chest"]},
+  "plank":{p:["abs"],s:["obliques","hip_flexors"]},
+  "crunch":{p:["abs"],s:["hip_flexors"]},
+  "sit-up":{p:["abs"],s:["hip_flexors"]},
+  "ab wheel":{p:["abs"],s:["obliques","hip_flexors","lats"]},
+  "toes to bar":{p:["abs","hip_flexors"],s:["lats"]},
+  "beinheben":{p:["abs","hip_flexors"],s:[]},
+  "leg raise":{p:["abs","hip_flexors"],s:[]},
+  "dragon flag":{p:["abs"],s:["lower_back"]},
+  "hollow":{p:["abs"],s:[]},
+  "dead bug":{p:["abs"],s:["hip_flexors"]},
+  "russian twist":{p:["obliques"],s:["abs"]},
+  "woodchop":{p:["obliques","abs"],s:["lats"]},
+  "pallof":{p:["abs","obliques"],s:[]},
+  "seitstütz":{p:["obliques"],s:["abs"]},
+  "side plank":{p:["obliques"],s:["abs"]},
+  "kniebeugen":{p:["quads","glutes"],s:["hamstrings","lower_back","calves"]},
+  "squat":{p:["quads","glutes"],s:["hamstrings","lower_back","calves"]},
+  "beinpresse":{p:["quads","glutes"],s:["hamstrings"]},
+  "leg press":{p:["quads","glutes"],s:["hamstrings"]},
+  "ausfallschritte":{p:["quads","glutes"],s:["hamstrings","calves"]},
+  "lunge":{p:["quads","glutes"],s:["hamstrings","calves"]},
+  "step up":{p:["quads","glutes"],s:["hamstrings"]},
+  "bulgarian":{p:["quads","glutes"],s:["hamstrings"]},
+  "hack squat":{p:["quads"],s:["glutes"]},
+  "beinstrecker":{p:["quads"],s:[]},
+  "leg extension":{p:["quads"],s:[]},
+  "hip thrust":{p:["glutes"],s:["hamstrings","lower_back"]},
+  "glute bridge":{p:["glutes"],s:["hamstrings"]},
+  "leg curl":{p:["hamstrings"],s:[]},
+  "bein curl":{p:["hamstrings"],s:[]},
+  "nordic":{p:["hamstrings"],s:["glutes"]},
+  "glute ham":{p:["hamstrings","glutes"],s:["lower_back"]},
+  "hip hinge":{p:["hamstrings","glutes"],s:["lower_back"]},
+  "donkey kick":{p:["glutes"],s:[]},
+  "wadenheben":{p:["calves"],s:[]},
+  "calf raise":{p:["calves"],s:[]},
+  "clean":{p:["traps","quads","glutes"],s:["hamstrings","lats","front_delt"]},
+  "snatch":{p:["traps","quads","glutes"],s:["hamstrings","front_delt","lats"]},
+  "thruster":{p:["quads","glutes","front_delt"],s:["triceps","abs","traps"]},
+  "wall ball":{p:["quads","glutes"],s:["front_delt","abs"]},
+  "kettlebell swing":{p:["glutes","hamstrings"],s:["lower_back","traps"]},
+  "swing":{p:["glutes","hamstrings"],s:["lower_back","traps"]},
+  "turkish get up":{p:["abs","glutes","front_delt"],s:["obliques","quads","triceps"]},
+  "farmers":{p:["traps","forearms"],s:["abs","lower_back"]},
+  "carry":{p:["traps","forearms"],s:["abs"]},
+  "suitcase":{p:["obliques","traps","forearms"],s:["abs","lower_back"]},
+  "zercher":{p:["biceps","front_delt","abs","quads"],s:["lower_back","chest"]},
+  "overhead carry":{p:["front_delt","traps","abs"],s:["triceps","lateral_delt"]},
+  "burpees":{p:["chest","quads"],s:["abs","front_delt","triceps"]},
+  "box jump":{p:["quads","calves","glutes"],s:["hamstrings"]},
+  "battle rope":{p:["front_delt","lateral_delt"],s:["abs","biceps"]},
+  "laufen":{p:["quads","hamstrings","calves"],s:["glutes"]},
+  "sprinten":{p:["quads","hamstrings","calves","glutes"],s:["hip_flexors"]},
+  "radfahren":{p:["quads","hamstrings"],s:["calves","glutes"]},
+};
+
+function getMuscleLoad(exercises,sessionIntensity,distanceKm,category,durationMin){
+  // Returns continuous 0.0-1.0: 1.0=primary, 0.45=secondary, 0=none
+  const load={};
+  Object.keys(MUSCLE_KEYWORDS).forEach(m=>{load[m]=0;});
+
+  if(!exercises||exercises.length===0){
+    const base=CAT_MUSCLES[category]||{};
+    Object.entries(base).forEach(([m,v])=>{load[m]=Math.max(load[m],v/3);});
+    if(distanceKm>0){
+      const d=distanceKm<5?0.5:distanceKm<10?0.75:1.0;
+      ["quads","hamstrings","calves"].forEach(m=>{load[m]=Math.max(load[m],d);});
+      ["glutes"].forEach(m=>{load[m]=Math.max(load[m],d*0.6);});
+    }
+    return load;
+  }
+
+  exercises.forEach(ex=>{
+    const name=(ex.name||"").toLowerCase();
+    const roleKey=Object.keys(MUSCLE_ROLES).find(kw=>name.includes(kw));
+    if(roleKey){
+      const role=MUSCLE_ROLES[roleKey];
+      role.p.forEach(m=>{load[m]=Math.max(load[m],1.0);});
+      role.s.forEach(m=>{load[m]=Math.max(load[m],0.45);});
+    } else {
+      Object.entries(MUSCLE_KEYWORDS).forEach(([muscle,keywords])=>{
+        if(keywords.some(kw=>name.includes(kw))){
+          load[muscle]=Math.max(load[muscle],0.7);
+        }
+      });
+    }
+  });
+  return load;
+}
+
+function getSessionMuscleLoad(session){
+  let exs=session.exercises||[];
+  if(exs.length===0&&session.exercises_text){
+    exs=(session.exercises_text||"").split("\n").filter(Boolean).map(line=>{
+      const m=line.match(/^(.+?)\s+(\d+)\s*[xX×]\s*(\d+(?:[,.]?\d+)?)\s*([\d,.]+)?\s*(?:kg)?/i);
+      if(m)return{name:m[1].trim(),sets:+m[2],reps:parseFloat(m[3].replace(",","."))||8,weight:m[4]?parseFloat(m[4].replace(",","."))||0:0};
+      return{name:line.trim(),sets:3,reps:8,weight:0};
+    });
+  }
+  return getMuscleLoad(exs,session.intensity||5,
+    session.distance_km||parseFloat((session.distance_raw||"0").replace(",","."))||0,
+    session.category||"",
+    session.duration||p2m(session.duration_raw)||45);
+}
+
+function getTotalMuscleLoad(sessions){
+  const totals={};
+  Object.keys(MUSCLE_KEYWORDS).forEach(m=>{totals[m]=0;});
+  sessions.forEach(s=>{
+    const load=getSessionMuscleLoad(s);
+    Object.entries(load).forEach(([m,v])=>{totals[m]+=v;});
+  });
+  const maxVal=Math.max(0.001,...Object.values(totals));
+  const norm={};
+  // Normalize to 0-1 continuous
+  Object.entries(totals).forEach(([m,v])=>{norm[m]=Math.min(1,v/maxVal);});
+  return norm;
+}
+
+// ── BODY HEATMAP ─────────────────────────────────────────────────────────────
+// react-body-highlighter slug mapping
+const SLUG_MAP={
+  chest:"chest", front_delt:"front-deltoids", lateral_delt:"front-deltoids",
+  rear_delt:"back-deltoids", traps:"trapezius", lats:"upper-back",
+  upper_back:"upper-back", lower_back:"lower-back", biceps:"biceps",
+  triceps:"triceps", forearms:"forearm", abs:"abs", obliques:"obliques",
+  hip_flexors:"abs", quads:"quadriceps", hamstrings:"hamstring",
+  glutes:"gluteal", calves:"calves", brachialis:"biceps",
+};
+
+// Lazy load the real package
+let _RBH=null, _rbhLoading=false, _rbhCallbacks=[];
+function loadRBH(cb){
+  if(_RBH){cb(_RBH);return;}
+  _rbhCallbacks.push(cb);
+  if(_rbhLoading)return;
+  _rbhLoading=true;
+  import("https://esm.sh/react-body-highlighter@2.0.5").then(m=>{
+    _RBH=m.default||m.Model;
+    _rbhCallbacks.forEach(f=>f(_RBH));
+    _rbhCallbacks=[];
+  }).catch(()=>{
+    _rbhCallbacks.forEach(f=>f(null));
+    _rbhCallbacks=[];
+  });
+}
+
+function MuscleBodyMap({load,size,title}){
+  const H=size||185;
+  const W=H*0.72;
+  const[Model,setModel]=useState(null);
+  const[failed,setFailed]=useState(false);
+
+  useEffect(()=>{
+    loadRBH(m=>{if(m)setModel(()=>m);else setFailed(true);});
+  },[]);
+
+  function muscleColor(v){
+    if(!v||v<=0)return null;
+    if(v>=0.8)return"#ef4444";
+    if(v>=0.35)return"#facc15";
+    return"#f97316";
+  }
+
+  // Build data: max value per slug
+  const slugMax={};
+  Object.entries(load||{}).forEach(([m,v])=>{
+    if(!v||v<=0)return;
+    const slug=SLUG_MAP[m];
+    if(!slug)return;
+    if(!slugMax[slug]||v>slugMax[slug])slugMax[slug]=v;
+  });
+  const bodyData=Object.entries(slugMax)
+    .map(([slug,v])=>({slug,color:muscleColor(v)||"#ef4444",intensity:1}));
+
+  const legend=<div style={{display:"flex",gap:"14px",justifyContent:"center",marginTop:"8px",flexWrap:"wrap"}}>
+    {[["#ef4444","Primär"],["#facc15","Sekundär"],["#3a3a3a","Nicht belastet"]].map(([col,lbl])=>
+      <div key={lbl} style={{display:"flex",alignItems:"center",gap:"5px"}}>
+        <div style={{width:"11px",height:"11px",borderRadius:"50%",background:col,border:"1px solid #555"}}/>
+        <span style={{color:"#999",fontFamily:M,fontSize:"7.5px"}}>{lbl}</span>
+      </div>
+    )}
+  </div>;
+
+  if(!Model&&!failed){
+    return <div style={{textAlign:"center",padding:"16px",color:G4,fontFamily:M,fontSize:"9px"}}>
+      {title&&<div style={{marginBottom:"6px",letterSpacing:"2px"}}>{title}</div>}
+      Lade Körperkarte...
+    </div>;
+  }
+
+  // If package loaded: use real anatomical SVG polygons
+  if(Model){
+    const half=Math.round(W/2)-2;
+    const modelStyle={width:half+"px",display:"inline-block"};
+    return <div style={{userSelect:"none"}}>
+      {title&&<div style={{color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"6px",textAlign:"center"}}>{title}</div>}
+      <div style={{display:"flex",gap:"4px",justifyContent:"center",background:"#000",borderRadius:"8px",padding:"8px"}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{color:"#444",fontSize:"7px",fontFamily:M,marginBottom:"3px"}}>VORNE</div>
+          <Model data={bodyData} style={modelStyle} type="anterior"
+            bodyColor="#2d2d2d" highlightedColors={["#ef4444","#facc15"]}/>
+        </div>
+        <div style={{textAlign:"center"}}>
+          <div style={{color:"#444",fontSize:"7px",fontFamily:M,marginBottom:"3px"}}>HINTEN</div>
+          <Model data={bodyData} style={modelStyle} type="posterior"
+            bodyColor="#2d2d2d" highlightedColors={["#ef4444","#facc15"]}/>
+        </div>
+      </div>
+      {legend}
+    </div>;
+  }
+
+  // Fallback SVG — clean schematic, one shape per muscle
+  function fc(m){return muscleColor(load[m]||0)||"#2d2d2d";}
+  function sw(m){return(load[m]||0)>0?0.4:0.2;}
+  const half2=Math.round(W/2)-2;
+
+  // Shared outline — anatomically proportioned male
+  // viewBox 0 0 100 220: head+neck 0-30, torso 30-105, legs 105-210
+  const OUTLINE="M50 2 C45 2 40 5 38 10 C36 16 38 22 41 26 C37 27 34 30 33 33 C29 32 25 33 23 37 C20 42 21 50 25 55 C22 57 19 61 18 66 C16 72 18 80 23 84 C22 88 22 96 23 102 C22 105 22 112 25 117 C26 121 28 124 28 127 L28 145 29 162 30 184 31 195 32 201 C32 205 34 208 37 208 C40 208 40 204 40 200 L40 184 41 166 42 149 43 134 44 121 C46 128 48 121 50 117 L52 134 53 149 54 166 55 184 56 200 C56 204 56 208 59 208 C62 208 64 204 64 200 L65 184 66 166 67 149 68 134 69 121 C71 128 73 121 75 117 L76 134 77 149 78 162 79 184 80 200 C80 204 80 208 83 208 C86 208 88 205 88 201 L89 195 90 184 91 162 72 145 72 127 C72 124 74 121 75 117 C78 112 78 105 77 102 C78 96 78 88 77 84 C82 80 84 72 82 66 C81 61 78 57 75 55 C79 50 80 42 77 37 C75 33 71 32 67 33 C66 30 63 27 59 26 C62 22 64 16 62 10 C60 5 55 2 50 2Z";
+
+  const SvgFront=()=><svg width={half2} height={H} viewBox="0 0 100 220" style={{display:"block"}}>
+    <path d={OUTLINE} fill="#141414" stroke="#383838" strokeWidth="0.9"/>
+    <ellipse cx="50" cy="12" rx="11" ry="12" fill="#1e1e1e" stroke="#383838" strokeWidth="0.6"/>
+    <path d="M45 23 L55 23 L54 32 L46 32Z" fill="#181818"/>
+    {/* CHEST */}
+    <path d="M33 34 C38 31 44 30 50 31 C56 30 62 31 67 34 L65 62 C59 67 50 68 41 65Z"
+      fill={fc("chest")} stroke={fc("chest")} strokeWidth={sw("chest")}/>
+    <line x1="50" y1="31" x2="50" y2="67" stroke="#0c0c0c" strokeWidth="1.6" opacity="0.8"/>
+    {/* FRONT DELT */}
+    <path d="M25 35 C19 40 18 49 20 56 C22 61 27 63 31 61 C33 55 34 47 33 41 C32 36 28 33 25 35Z"
+      fill={fc("front_delt")} stroke={fc("front_delt")} strokeWidth={sw("front_delt")}/>
+    <path d="M75 35 C81 40 82 49 80 56 C78 61 73 63 69 61 C67 55 66 47 67 41 C68 36 72 33 75 35Z"
+      fill={fc("front_delt")} stroke={fc("front_delt")} strokeWidth={sw("front_delt")}/>
+    {/* LATERAL DELT */}
+    <path d="M18 38 C13 44 13 52 15 58 C17 62 21 63 24 61 C25 55 25 47 25 41 C24 38 20 36 18 38Z"
+      fill={fc("lateral_delt")} stroke={fc("lateral_delt")} strokeWidth={sw("lateral_delt")}/>
+    <path d="M82 38 C87 44 87 52 85 58 C83 62 79 63 76 61 C75 55 75 47 75 41 C76 38 80 36 82 38Z"
+      fill={fc("lateral_delt")} stroke={fc("lateral_delt")} strokeWidth={sw("lateral_delt")}/>
+    {/* BICEPS */}
+    <path d="M15 58 C11 67 11 79 13 87 C15 92 19 93 23 92 C25 85 24 73 23 64 C22 58 18 56 15 58Z"
+      fill={fc("biceps")} stroke={fc("biceps")} strokeWidth={sw("biceps")}/>
+    <path d="M85 58 C89 67 89 79 87 87 C85 92 81 93 77 92 C75 85 76 73 77 64 C78 58 82 56 85 58Z"
+      fill={fc("biceps")} stroke={fc("biceps")} strokeWidth={sw("biceps")}/>
+    {/* TRICEPS */}
+    <path d="M13 59 C9 68 9 81 11 88 C12 92 15 93 18 92 C16 85 15 72 15 64 C15 60 13 58 13 59Z"
+      fill={fc("triceps")} stroke={fc("triceps")} strokeWidth={sw("triceps")}/>
+    <path d="M87 59 C91 68 91 81 89 88 C88 92 85 93 82 92 C84 85 85 72 85 64 C85 60 87 58 87 59Z"
+      fill={fc("triceps")} stroke={fc("triceps")} strokeWidth={sw("triceps")}/>
+    {/* FOREARMS */}
+    <path d="M11 92 C8 102 9 114 12 122 C14 126 18 127 21 126 C23 118 22 107 22 97 C21 92 14 90 11 92Z"
+      fill={fc("forearms")} stroke={fc("forearms")} strokeWidth={sw("forearms")}/>
+    <path d="M89 92 C92 102 91 114 88 122 C86 126 82 127 79 126 C77 118 78 107 78 97 C79 92 86 90 89 92Z"
+      fill={fc("forearms")} stroke={fc("forearms")} strokeWidth={sw("forearms")}/>
+    {/* ABS */}
+    <path d="M36 64 L64 64 L63 100 C58 105 50 106 42 103 L37 100Z"
+      fill={fc("abs")} stroke={fc("abs")} strokeWidth={sw("abs")}/>
+    <line x1="50" y1="64" x2="50" y2="105" stroke="#0c0c0c" strokeWidth="1.3" opacity="0.7"/>
+    <line x1="37" y1="77" x2="63" y2="77" stroke="#0c0c0c" strokeWidth="0.8" opacity="0.5"/>
+    <line x1="37" y1="90" x2="63" y2="90" stroke="#0c0c0c" strokeWidth="0.8" opacity="0.5"/>
+    {/* OBLIQUES */}
+    <path d="M32 66 C27 77 27 91 29 102 C31 107 35 109 39 107 C40 97 40 83 41 72 C41 66 36 63 32 66Z"
+      fill={fc("obliques")} stroke={fc("obliques")} strokeWidth={sw("obliques")}/>
+    <path d="M68 66 C73 77 73 91 71 102 C69 107 65 109 61 107 C60 97 60 83 59 72 C59 66 64 63 68 66Z"
+      fill={fc("obliques")} stroke={fc("obliques")} strokeWidth={sw("obliques")}/>
+    {/* HIP FLEXORS */}
+    <path d="M39 103 C34 112 35 125 38 131 C41 130 46 124 46 116 C47 109 43 103 39 103Z"
+      fill={fc("hip_flexors")} stroke={fc("hip_flexors")} strokeWidth={sw("hip_flexors")}/>
+    <path d="M61 103 C66 112 65 125 62 131 C59 130 54 124 54 116 C53 109 57 103 61 103Z"
+      fill={fc("hip_flexors")} stroke={fc("hip_flexors")} strokeWidth={sw("hip_flexors")}/>
+    {/* QUADS */}
+    <path d="M26 128 C20 145 20 167 24 181 C27 188 34 190 41 187 C45 176 44 155 43 138 C41 129 33 124 26 128Z"
+      fill={fc("quads")} stroke={fc("quads")} strokeWidth={sw("quads")}/>
+    <path d="M74 128 C80 145 80 167 76 181 C73 188 66 190 59 187 C55 176 56 155 57 138 C59 129 67 124 74 128Z"
+      fill={fc("quads")} stroke={fc("quads")} strokeWidth={sw("quads")}/>
+    {/* KNEES */}
+    <ellipse cx="33" cy="183" rx="9" ry="6" fill="#1a1a1a" stroke="#2d2d2d" strokeWidth="0.5"/>
+    <ellipse cx="67" cy="183" rx="9" ry="6" fill="#1a1a1a" stroke="#2d2d2d" strokeWidth="0.5"/>
+    {/* CALVES */}
+    <path d="M24 189 C19 204 21 214 25 218 C28 221 34 221 38 218 C41 210 40 198 39 189Z"
+      fill={fc("calves")} stroke={fc("calves")} strokeWidth={sw("calves")}/>
+    <path d="M76 189 C81 204 79 214 75 218 C72 221 66 221 62 218 C59 210 60 198 61 189Z"
+      fill={fc("calves")} stroke={fc("calves")} strokeWidth={sw("calves")}/>
+    {/* FEET */}
+    <path d="M21 217 C18 221 21 224 27 224 L38 224 C40 223 37 219 35 217Z" fill="#111" stroke="#252525" strokeWidth="0.4"/>
+    <path d="M79 217 C82 221 79 224 73 224 L62 224 C60 223 63 219 65 217Z" fill="#111" stroke="#252525" strokeWidth="0.4"/>
+  </svg>;
+
+  const SvgBack=()=><svg width={half2} height={H} viewBox="0 0 100 220" style={{display:"block"}}>
+    <path d={OUTLINE} fill="#141414" stroke="#383838" strokeWidth="0.9"/>
+    <ellipse cx="50" cy="12" rx="11" ry="12" fill="#1e1e1e" stroke="#383838" strokeWidth="0.6"/>
+    <path d="M45 23 L55 23 L54 32 L46 32Z" fill="#181818"/>
+    {/* TRAPS */}
+    <path d="M37 24 C41 20 50 18 59 20 C64 24 66 30 63 36 C57 32 50 30 43 32 C40 36 38 30 37 24Z"
+      fill={fc("traps")} stroke={fc("traps")} strokeWidth={sw("traps")}/>
+    {/* REAR DELT */}
+    <path d="M25 35 C19 40 18 49 20 56 C22 61 27 63 31 61 C33 55 34 47 33 41 C32 36 28 33 25 35Z"
+      fill={fc("rear_delt")} stroke={fc("rear_delt")} strokeWidth={sw("rear_delt")}/>
+    <path d="M75 35 C81 40 82 49 80 56 C78 61 73 63 69 61 C67 55 66 47 67 41 C68 36 72 33 75 35Z"
+      fill={fc("rear_delt")} stroke={fc("rear_delt")} strokeWidth={sw("rear_delt")}/>
+    {/* LATERAL DELT */}
+    <path d="M18 38 C13 44 13 52 15 58 C17 62 21 63 24 61 C25 55 25 47 25 41 C24 38 20 36 18 38Z"
+      fill={fc("lateral_delt")} stroke={fc("lateral_delt")} strokeWidth={sw("lateral_delt")}/>
+    <path d="M82 38 C87 44 87 52 85 58 C83 62 79 63 76 61 C75 55 75 47 75 41 C76 38 80 36 82 38Z"
+      fill={fc("lateral_delt")} stroke={fc("lateral_delt")} strokeWidth={sw("lateral_delt")}/>
+    {/* LATS */}
+    <path d="M24 46 C18 62 17 81 21 96 C23 102 28 104 34 101 C37 91 36 72 37 58 C37 49 30 44 24 46Z"
+      fill={fc("lats")} stroke={fc("lats")} strokeWidth={sw("lats")}/>
+    <path d="M76 46 C82 62 83 81 79 96 C77 102 72 104 66 101 C63 91 64 72 63 58 C63 49 70 44 76 46Z"
+      fill={fc("lats")} stroke={fc("lats")} strokeWidth={sw("lats")}/>
+    {/* UPPER BACK */}
+    <path d="M35 35 L65 35 L65 65 C59 70 50 72 41 68 L35 65Z"
+      fill={fc("upper_back")} stroke={fc("upper_back")} strokeWidth={sw("upper_back")}/>
+    <line x1="50" y1="33" x2="50" y2="103" stroke="#0c0c0c" strokeWidth="1.3" opacity="0.6"/>
+    {/* LOWER BACK */}
+    <path d="M39 67 L61 67 L61 100 C56 105 50 106 44 103 L39 100Z"
+      fill={fc("lower_back")} stroke={fc("lower_back")} strokeWidth={sw("lower_back")}/>
+    {/* TRICEPS */}
+    <path d="M13 59 C9 68 9 81 11 88 C12 92 15 93 18 92 C16 85 15 72 15 64 C15 60 13 58 13 59Z"
+      fill={fc("triceps")} stroke={fc("triceps")} strokeWidth={sw("triceps")}/>
+    <path d="M87 59 C91 68 91 81 89 88 C88 92 85 93 82 92 C84 85 85 72 85 64 C85 60 87 58 87 59Z"
+      fill={fc("triceps")} stroke={fc("triceps")} strokeWidth={sw("triceps")}/>
+    {/* FOREARMS */}
+    <path d="M11 92 C8 102 9 114 12 122 C14 126 18 127 21 126 C23 118 22 107 22 97 C21 92 14 90 11 92Z"
+      fill={fc("forearms")} stroke={fc("forearms")} strokeWidth={sw("forearms")}/>
+    <path d="M89 92 C92 102 91 114 88 122 C86 126 82 127 79 126 C77 118 78 107 78 97 C79 92 86 90 89 92Z"
+      fill={fc("forearms")} stroke={fc("forearms")} strokeWidth={sw("forearms")}/>
+    {/* GLUTES */}
+    <path d="M27 101 C21 115 20 132 25 143 C28 149 35 151 42 147 C46 137 45 119 44 106 C43 99 34 97 27 101Z"
+      fill={fc("glutes")} stroke={fc("glutes")} strokeWidth={sw("glutes")}/>
+    <path d="M73 101 C79 115 80 132 75 143 C72 149 65 151 58 147 C54 137 55 119 56 106 C57 99 66 97 73 101Z"
+      fill={fc("glutes")} stroke={fc("glutes")} strokeWidth={sw("glutes")}/>
+    {/* HAMSTRINGS */}
+    <path d="M25 145 C20 162 20 181 24 192 C27 198 34 200 41 197 C45 186 44 167 43 151 C42 143 32 141 25 145Z"
+      fill={fc("hamstrings")} stroke={fc("hamstrings")} strokeWidth={sw("hamstrings")}/>
+    <path d="M75 145 C80 162 80 181 76 192 C73 198 66 200 59 197 C55 186 56 167 57 151 C58 143 68 141 75 145Z"
+      fill={fc("hamstrings")} stroke={fc("hamstrings")} strokeWidth={sw("hamstrings")}/>
+    {/* KNEES */}
+    <ellipse cx="33" cy="194" rx="9" ry="6" fill="#1a1a1a" stroke="#2d2d2d" strokeWidth="0.5"/>
+    <ellipse cx="67" cy="194" rx="9" ry="6" fill="#1a1a1a" stroke="#2d2d2d" strokeWidth="0.5"/>
+    {/* CALVES */}
+    <path d="M24 199 C19 213 21 220 25 223 C28 226 34 226 38 223 C41 215 40 204 39 199Z"
+      fill={fc("calves")} stroke={fc("calves")} strokeWidth={sw("calves")}/>
+    <path d="M76 199 C81 213 79 220 75 223 C72 226 66 226 62 223 C59 215 60 204 61 199Z"
+      fill={fc("calves")} stroke={fc("calves")} strokeWidth={sw("calves")}/>
+    {/* FEET */}
+    <path d="M21 222 C18 226 21 229 27 229 L38 229 C40 228 37 224 35 222Z" fill="#111" stroke="#252525" strokeWidth="0.4"/>
+    <path d="M79 222 C82 226 79 229 73 229 L62 229 C60 228 63 224 65 222Z" fill="#111" stroke="#252525" strokeWidth="0.4"/>
+  </svg>;
+
+  return <div style={{userSelect:"none"}}>
+    {title&&<div style={{color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"6px",textAlign:"center"}}>{title}</div>}
+    <div style={{display:"flex",gap:"4px",justifyContent:"center"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{color:"#555",fontSize:"7px",fontFamily:M,marginBottom:"3px"}}>VORNE</div>
+        <SvgFront/>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{color:"#555",fontSize:"7px",fontFamily:M,marginBottom:"3px"}}>HINTEN</div>
+        <SvgBack/>
+      </div>
+    </div>
+    {legend}
+  </div>;
+}
+
+
+function HomeTab(p){const{sessions,sleep,body,fl,prs}=p;const fi=flInfo(fl);const rec=calcRecovery(sessions,sleep,fl);const recCol=rec.score>=80?G:rec.score>=55?G2:rec.score>=35?"#fb923c":"#ef4444";const ps=sessions.filter(s=>!/mobility/i.test(s.category||"")&&(s.intensity||0)>=4);const axes=[{goal:"Hypertrophie",value:axisScore(ps,"hyp"),color:G2},{goal:"Maximalkraft",value:axisScore(ps,"maxK"),color:G3},{goal:"Schnellkraft",value:axisScore(ps,"schnell"),color:"#bbf7d0"},{goal:"Kraftausdauer",value:axisScore(ps,"kausd"),color:G},{goal:"Ausdauer",value:(()=>{const aeroS=ps.filter(s=>/ausdauer|intervall_aus|fussball/i.test(s.category||""));return aeroS.length?Math.min(100,Math.round(aeroS.slice(-8).reduce((a,s)=>{const d=p2m(s.duration_raw)||s.duration||0,hf=s.hr_avg>0?Math.max(0,1-(s.hr_avg-120)/100):0.6;return a+Math.min(d/60,1)*70+hf*30;},0)/Math.min(aeroS.length,8))):0;})(),color:G2},{goal:"Military",value:(()=>{const milS=ps.filter(s=>/intervall_mil|kampf|fussball/i.test(s.category||"")||(s.exercises||[]).some(e=>e.name&&/burpee|thrusters|clean|snatch|rope|sprint/i.test(e.name)));return milS.length?Math.min(100,Math.round(milS.slice(-10).reduce((a,s)=>{const i2=(s.intensity||5)/10,hf=s.hr_avg>0?Math.min((s.hr_avg-100)/80,1):0.5;return a+i2*50+hf*50;},0)/Math.min(milS.length,10))):0;})(),color:G3}];const rs7=sleep.slice(-7);const avgHRV=rs7.filter(s=>s.hrv>0).length?Math.round(rs7.filter(s=>s.hrv>0).reduce((a,s)=>a+s.hrv,0)/rs7.filter(s=>s.hrv>0).length):0;const lastRhr=[...sleep].filter(s=>s.resting_hr>0).slice(-1)[0];const lb=body[body.length-1];const scoreTrend=sessions.slice(-14).map(s=>({date:fd(s.date),Score:s.perf_score!=null?s.perf_score:scoreSession(s)}));
+return <div>
+  <div style={{background:BG2,border:"1px solid "+G4,borderRadius:"10px",padding:"16px",marginBottom:"12px",textAlign:"center"}}>
+    <svg width="180" height="108" viewBox="0 0 180 108" style={{display:"block",margin:"0 auto"}}>
+      <defs><linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor={G4}/><stop offset="50%" stopColor={G}/><stop offset="100%" stopColor={G3}/></linearGradient></defs>
+      <path d="M15 100 A75 75 0 0 1 165 100" fill="none" stroke={G4+"40"} strokeWidth="14" strokeLinecap="round"/>
+      <path d="M15 100 A75 75 0 0 1 165 100" fill="none" stroke="url(#tg)" strokeWidth="14" strokeLinecap="round" strokeDasharray="236" strokeDashoffset={236-(236*fl/100)} style={{transition:"stroke-dashoffset 1.2s ease"}}/>
+      {[0,25,50,75,100].map(v=>{const a=Math.PI*(1-v/100);return <line key={v} x1={90+78*Math.cos(a)} y1={100-78*Math.sin(a)} x2={90+67*Math.cos(a)} y2={100-67*Math.sin(a)} stroke={G+"50"} strokeWidth="2"/>;} )}
+      {[0,25,50,75,100].map(v=>{const a=Math.PI*(1-v/100);return <text key={v} x={90+57*Math.cos(a)} y={100-57*Math.sin(a)} textAnchor="middle" fill={G4} fontSize="8" fontFamily={M}>{v}</text>;})}
+      <text x="90" y="90" textAnchor="middle" fill={fi.color} fontSize="34" fontWeight="900" fontFamily={C}>{fl}</text>
+      <text x="90" y="106" textAnchor="middle" fill={fi.color} fontSize="9" fontFamily={M}>{fi.label.toUpperCase()}</text>
+    </svg>
+  </div>
+  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"6px",marginBottom:"10px"}}>
+    {[{l:"RECOVERY",v:rec.score,c:recCol,sub:rec.rec},{l:"HF RUHE",v:lastRhr?lastRhr.resting_hr:"—",c:G2,sub:"BPM"},{l:"HRV",v:avgHRV||"—",c:G3,sub:"MS"}].map(s=><div key={s.l} style={{background:BG2,border:"1px solid "+s.c+"30",borderRadius:"5px",padding:"8px",textAlign:"center"}}><div style={{color:G4,fontSize:"7px",fontFamily:M,letterSpacing:"1px"}}>{s.l}</div><div style={{color:s.c,fontSize:"22px",fontWeight:900,fontFamily:C,lineHeight:1}}>{s.v}</div><div style={{color:s.c,fontSize:"7px",fontFamily:M}}>{s.sub}</div></div>)}
+  </div>
+  <div style={{background:G4+"10",border:"1px solid "+G4+"50",borderRadius:"5px",padding:"6px 10px",marginBottom:"10px",display:"flex",gap:"14px",flexWrap:"wrap"}}>
+    <span style={{color:G4,fontFamily:M,fontSize:"9px"}}>⏱ Erholung: <span style={{color:G2}}>{rec.recDaysNeeded}T</span></span>
+    <span style={{color:G4,fontFamily:M,fontSize:"9px"}}>Diese Woche: <span style={{color:G2}}>{rec.weekSessions}×</span></span>
+  </div>
+  {rec.warn.length>0&&<div style={{background:G4+"15",border:"1px solid "+G4,borderRadius:"5px",padding:"8px 12px",marginBottom:"10px"}}>{rec.warn.map((w,i)=><div key={i} style={{color:G2,fontSize:"11px",marginBottom:"2px"}}>{w}</div>)}<div style={{color:recCol,fontFamily:M,fontSize:"9px",marginTop:"4px",fontWeight:700}}>→ {rec.rec}</div></div>}
+  {sleep.length>=2&&<Card style={{marginBottom:"10px"}}>
+    <Lbl c="HRV & RUHEPULS VERLAUF"/>
+    <ResponsiveContainer width="100%" height={100}>
+      <LineChart data={sleep.slice(-30).filter(s=>s.hrv>0||s.resting_hr>0).map(s=>({date:fd(s.date),HRV:s.hrv||undefined,"HR Ruhe":s.resting_hr||undefined}))}>
+        <CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:8}}/><YAxis tick={{fill:G4,fontSize:8}}/><Tooltip contentStyle={TT}/><Legend wrapperStyle={{fontSize:"9px"}}/>
+        <Line type="monotone" dataKey="HRV" stroke={G2} strokeWidth={2} dot={{r:2}} connectNulls/>
+        <Line type="monotone" dataKey="HR Ruhe" stroke="#fb923c" strokeWidth={2} dot={{r:2}} connectNulls/>
+      </LineChart>
+    </ResponsiveContainer>
+  </Card>}
+  <Card style={{marginBottom:"10px"}}>
+    <Lbl c="FITNESS PROFIL"/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"5px",marginBottom:"10px"}}>
+      {axes.map(d=><div key={d.goal} style={{background:d.color+"08",border:"1px solid "+d.color+"25",borderRadius:"5px",padding:"6px 8px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"3px"}}><div style={{color:G4,fontSize:"8px",fontFamily:M}}>{d.goal}</div><div style={{color:d.color,fontSize:"14px",fontWeight:900,fontFamily:C}}>{d.value}</div></div>
+        <div style={{height:"3px",background:G4+"30",borderRadius:"2px",overflow:"hidden"}}><div style={{height:"100%",width:d.value+"%",background:d.color,borderRadius:"2px",transition:"width 1s ease"}}/></div>
+      </div>)}
+    </div>
+    <ResponsiveContainer width="100%" height={150}><RadarChart data={axes} cx="50%" cy="50%"><PolarGrid stroke={G4+"50"}/><PolarAngleAxis dataKey="goal" tick={{fill:G4,fontSize:8}}/><Radar dataKey="value" stroke={G} fill={G} fillOpacity={0.1} strokeWidth={2}/><Tooltip contentStyle={TT}/></RadarChart></ResponsiveContainer>
+  </Card>
+  {/* Muscle load cards */}
+  {sessions.length>0&&<>
+    <Card style={{marginBottom:"10px"}}>
+      <Lbl c="MUSKELBELASTUNG — ALLE EINHEITEN"/>
+      <MuscleBodyMap load={getTotalMuscleLoad(sessions)} size={140}/>
+    </Card>
+    {sessions.filter(s=>(Date.now()-new Date(s.date))/86400000<=7).length>0&&<Card style={{marginBottom:"10px"}}>
+      <Lbl c="MUSKELBELASTUNG — LETZTE 7 TAGE"/>
+      <MuscleBodyMap load={getTotalMuscleLoad(sessions.filter(s=>(Date.now()-new Date(s.date))/86400000<=7))} size={140}/>
+    </Card>}
+  </>}
+  {lb&&lb.weight>0&&<Card style={{marginBottom:"10px"}}><Lbl c="LETZTER KÖRPERWERT" s={{marginBottom:"4px"}}/><div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}><span style={{color:G2,fontFamily:C,fontSize:"18px",fontWeight:800}}>{fn(lb.weight)}<span style={{fontSize:"11px",color:G4}}> kg</span></span>{lb.kfa>0&&<span style={{color:G,fontFamily:M,fontSize:"11px"}}>KFA {fn(lb.kfa)}%</span>}{lb.bmi>0&&<span style={{color:G3,fontFamily:M,fontSize:"11px"}}>BMI {fn(lb.bmi)}</span>}{lb.vo2max>0&&<span style={{color:G2,fontFamily:M,fontSize:"11px"}}>VO2max {fn(lb.vo2max)}</span>}</div></Card>}
+  {scoreTrend.length>=2&&<Card style={{marginBottom:"10px"}}><Lbl c="PERFORMANCE SCORE"/>
+    <ResponsiveContainer width="100%" height={90}><AreaChart data={scoreTrend}><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={G} stopOpacity={0.3}/><stop offset="95%" stopColor={G} stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis domain={[0,100]} tick={{fill:G4,fontSize:9}}/><Tooltip contentStyle={TT}/><Area type="monotone" dataKey="Score" stroke={G} fill="url(#sg)" strokeWidth={2} dot={{r:2,fill:G}}/></AreaChart></ResponsiveContainer>
+  </Card>}
+  <Card style={{background:G4+"10",marginBottom:"0"}}>
+    <Lbl c="🏆 BESTLEISTUNGEN"/>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
+      {PR_EXERCISES.map(ex=>{const pr=(prs||{})[ex];return <div key={ex} style={{background:BG2,border:"1px solid "+(pr?G:G4+"40"),borderRadius:"5px",padding:"8px 10px"}}>
+        <div style={{color:G4,fontSize:"8px",fontFamily:M,marginBottom:"3px"}}>{ex.toUpperCase()}</div>
+        {pr?<><div style={{color:G2,fontSize:"16px",fontWeight:900,fontFamily:C,lineHeight:1}}>{pr.value}</div><div style={{color:G4,fontSize:"8px",fontFamily:M,marginTop:"2px"}}>{fdl(pr.date)}</div></>:<div style={{color:G4,fontSize:"11px",fontFamily:M,marginTop:"2px"}}>noch kein PR</div>}
+      </div>;})}
+    </div>
+  </Card>
+</div>;}
+const EF={date:new Date().toISOString().split("T")[0],category:"kraft_upper",session_name:"",description:"",duration_raw:"",intensity:6,exercises_text:"",amrap_mode:"",hr_avg:"",hr_max:"",distance_raw:"",pace_raw:"",speed_avg:"",speed_max:"",garmin_kcal:"",garmin_aerob:"",garmin_anaerob:"",ausdauer_typ:"",runden_zeiten:"",kampf_disziplin:"",kampf_runden:"",max_ex:"",max_weight:"",max_reps:""};
+function CreateTab(p){
+  const{sessions,setSessions,fl,setFl,prs,setPrs,initEdit,onClearEdit}=p;
+  const[f,setF]=useState(()=>initEdit?{...EF,...initEdit,date:initEdit.date?new Date(initEdit.date).toISOString().split("T")[0]:new Date().toISOString().split("T")[0],duration_raw:initEdit.duration_raw||m2h(initEdit.duration)||""}:{...EF});
+  const[exSearch,setExSearch]=useState("");const[showAmrap,setShowAmrap]=useState(false);const[newPRs,setNewPRs]=useState([]);const[showPR,setShowPR]=useState(false);
+  const[nameSearch,setNameSearch]=useState("");const[nameSugs,setNameSugs]=useState([]);const[showNameSugs,setShowNameSugs]=useState(false);
+  function set(k,v){setF(prev=>({...prev,[k]:v}));}
+  const cat=CAT.find(c=>c.id===f.category)||CAT[CAT.length-1];
+  const isFuss=f.category==="fussball",isKampf=f.category==="kampfsport",isAusdauer=f.category==="ausdauer",isIntAus=f.category==="intervall_aus",isMilInt=f.category==="intervall_mil",isKraft=/kraft/i.test(f.category);
+  const showExercises=isKraft||isMilInt,showIntSlider=!isFuss&&!isKampf;
+  const parsedEx=parseEx(f.exercises_text||"");
+  const inpS={width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 8px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box",minWidth:0};
+  function handleNameChange(v){set("session_name",v);if(v.length>=2){const matches=[...new Map(sessions.filter(s=>s.session_name&&s.session_name.toLowerCase().includes(v.toLowerCase())).sort((a,b)=>new Date(b.date)-new Date(a.date)).map(s=>[s.session_name,s])).values()].slice(0,5);setNameSugs(matches);setShowNameSugs(matches.length>0);}else setShowNameSugs(false);}
+  function applyPastWorkout(s){setF(prev=>({...prev,session_name:s.session_name,category:s.category||prev.category,duration_raw:s.duration_raw||"",intensity:s.intensity||6,exercises_text:s.exercises_text||"",description:"",amrap_mode:s.amrap_mode||"",hr_avg:"",hr_max:"",distance_raw:"",pace_raw:"",speed_avg:"",speed_max:"",garmin_kcal:"",garmin_aerob:"",garmin_anaerob:"",ausdauer_typ:s.ausdauer_typ||"",runden_zeiten:""}));setShowNameSugs(false);}
+  function calcSpeed(paceRaw,distRaw,durRaw){const paceMin=paceRaw?p2m(paceRaw):0;if(paceMin>0)return (60/paceMin).toFixed(2);const dist=parseFloat((distRaw||"").replace(",","."))||0;const dur=p2m(durRaw)||0;if(dist>0&&dur>0)return (dist/(dur/60)).toFixed(2);return "";}
+  const autoAusdCalc=(()=>{const dist=parseFloat((f.distance_raw||"").replace(",","."))||0;const dur=p2m(f.duration_raw)||0;const paceMin=f.pace_raw?p2m(f.pace_raw):0;const speedFromPace=paceMin>0?+(60/paceMin).toFixed(2):0;const speedFromDist=dist>0&&dur>0?+(dist/(dur/60)).toFixed(2):0;const autoSpeed=speedFromPace>0?speedFromPace:speedFromDist;const paceCalc=dist>0&&dur>0&&!f.pace_raw?Math.floor(dur/dist)+":"+String(Math.round((dur/dist%1)*60)).padStart(2,"0")+" min/km":"";const vo2=(f.hr_max>0&&f.hr_avg>0)?estimateVO2max(+f.hr_max,+f.hr_avg):null;const te=calcTrainingEffect(+f.hr_avg||0,+f.hr_max||0,dur,isIntAus);if(!vo2&&!autoSpeed&&!paceCalc&&!te.aerob)return null;return{vo2,paceCalc,autoSpeed,aerob:te.aerob,anaerob:te.anaerob};})();
+  const autoFussCalc=(()=>{const dur=p2m(f.duration_raw)||0,hrAvg=+f.hr_avg||0,dist=parseFloat((f.distance_raw||"").replace(",","."))||0;const appKcal=hrAvg>0&&dur>0?Math.round((hrAvg*dur*0.0175-0.7)*4.5):dist>0?Math.round(dist*70):0;const pace=dist>0&&dur>0?Math.floor(dur/dist)+":"+String(Math.round((dur/dist%1)*60)).padStart(2,"0")+" min/km":"—";return{appKcal,pace};})();
+  useEffect(()=>{if(initEdit)setF({...EF,...initEdit,date:initEdit.date?new Date(initEdit.date).toISOString().split("T")[0]:new Date().toISOString().split("T")[0],duration_raw:initEdit.duration_raw||m2h(initEdit.duration)||""});},[initEdit]);
+  async function handleSave(){
+    const exList=parseEx(f.exercises_text||"").filter(e=>e.name.trim().length>0);
+    const autoInt=(isFuss||isKampf)&&f.hr_avg?Math.min(10,Math.max(1,Math.round((+f.hr_avg-100)/10))):+f.intensity;
+    const dist=parseFloat((f.distance_raw||"").replace(",","."))||0;
+    const paceMinSave=f.pace_raw?p2m(f.pace_raw):0;
+    const autoSpeedSave=paceMinSave>0?+(60/paceMinSave).toFixed(2):(dist>0&&p2m(f.duration_raw)>0?+(dist/(p2m(f.duration_raw)/60)).toFixed(2):0);
+    const vo2=isAusdauer&&f.hr_max&&f.hr_avg?estimateVO2max(+f.hr_max,+f.hr_avg):null;
+    const teS=calcTrainingEffect(+f.hr_avg||0,+f.hr_max||0,p2m(f.duration_raw)||30,isIntAus);
+    const finalAerob=+f.garmin_aerob||teS.aerob||0;
+    const finalAnaerob=+f.garmin_anaerob||teS.anaerob||0;
+    const s={id:initEdit?.id||Date.now(),date:new Date(f.date+"T12:00:00").toISOString(),category:f.category,category_label:cat.label+(f.amrap_mode?" ("+f.amrap_mode+")":""),category_color:cat.color,session_name:f.session_name||cat.label+(f.amrap_mode?" – "+f.amrap_mode:""),description:f.description,focus:f.description,duration:p2m(f.duration_raw),duration_raw:f.duration_raw,intensity:autoInt,exercises:exList,exercises_text:f.exercises_text,notes:f.description,source:"manual",hr_avg:+f.hr_avg||0,hr_max:+f.hr_max||0,distance_raw:f.distance_raw||"",distance_km:dist,pace_raw:f.pace_raw||"",speed_avg:+f.speed_avg||autoSpeedSave||0,speed_max:+f.speed_max||0,garmin_kcal:+f.garmin_kcal||0,garmin_aerob:finalAerob,garmin_anaerob:finalAnaerob,ausdauer_typ:f.ausdauer_typ||"",runden_zeiten:f.runden_zeiten||"",kampf_disziplin:f.kampf_disziplin||"",kampf_runden:+f.kampf_runden||0,vo2max_est:vo2,amrap_mode:f.amrap_mode||""};
+    if(f.max_ex&&(f.max_weight||f.max_reps)){s.max_attempt={exercise:f.max_ex,weight:+f.max_weight||0,reps:+f.max_reps||0,date:s.date};}
+    s.perf_score=scoreSession(s);
+    let upd;
+    if(initEdit){upd=sessions.map(x=>x.id===s.id?s:x);}
+    else{
+      const dPRs=detectPRs(s,sessions);
+      if(dPRs.length){setNewPRs(dPRs);setShowPR(true);}
+      const ap={...prs};dPRs.forEach(pr=>{ap[pr.exercise]={type:pr.type,value:pr.value,date:new Date().toISOString()};});
+      if(f.max_ex&&(f.max_weight||f.max_reps)){const newVal=f.max_weight?(+f.max_weight)+"kg":(+f.max_reps)+" Wdh";const prev=ap[f.max_ex];const isNewPR=!prev||(f.max_weight&&parseFloat(f.max_weight)>parseFloat(prev.value))||(f.max_reps&&parseFloat(f.max_reps)>parseFloat(prev.value));if(isNewPR){ap[f.max_ex]={type:"MAX PR",value:newVal,prev:prev?prev.value:"—",date:new Date().toISOString()};if(!dPRs.find(pp=>pp.exercise===f.max_ex))dPRs.push({type:"MAX PR",exercise:f.max_ex,value:newVal,prev:prev?prev.value:"—"});}}
+      setPrs(ap);await stSet(SK.pr,ap);
+      upd=[...sessions,s];
+    }
+    setSessions(upd);await stSet(SK.s,upd);
+    const nfl=calcFL(upd,fl);setFl(nfl);await stSet(SK.fl,nfl);
+    setF({...EF,date:f.date});if(onClearEdit)onClearEdit();
+  }
+  return <div style={{overflowX:"hidden",width:"100%",boxSizing:"border-box"}}>
+    {initEdit&&<div style={{padding:"6px 10px",background:G4+"20",border:"1px solid "+G4,borderRadius:"4px",marginBottom:"10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:G2,fontFamily:M,fontSize:"9px"}}>✏ BEARBEITEN: {(initEdit.session_name||"").toUpperCase()}</span><button onClick={()=>{setF({...EF});if(onClearEdit)onClearEdit();}} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"11px"}}>✕</button></div>}
+    <div style={{marginBottom:"9px"}}><Lbl c="DATUM"/><input type="date" value={f.date} onChange={e=>set("date",e.target.value)} style={inpS}/></div>
+    <div style={{marginBottom:"10px"}}><Lbl c="KATEGORIE"/><div style={{display:"flex",flexWrap:"wrap",gap:"4px",width:"100%"}}>{CAT.map(c=><button key={c.id} onClick={()=>set("category",c.id)} style={{padding:"3px 7px",background:f.category===c.id?c.color+"25":BG2,border:"1px solid "+(f.category===c.id?c.color:G4),borderRadius:"4px",color:f.category===c.id?c.color:G4,fontFamily:M,fontSize:"8px",cursor:"pointer",flexShrink:0}}>{c.icon} {c.label}</button>)}</div></div>
+    {isAusdauer&&<div style={{marginBottom:"10px"}}><Lbl c="AUSDAUER-TYP"/><div style={{display:"flex",flexWrap:"wrap",gap:"4px",width:"100%"}}>{AUSDAUER_TYPEN.map(m=><button key={m} onClick={()=>set("ausdauer_typ",f.ausdauer_typ===m?"":m)} style={{padding:"3px 7px",background:f.ausdauer_typ===m?G+"25":BG2,border:"1px solid "+(f.ausdauer_typ===m?G:G4),borderRadius:"4px",color:f.ausdauer_typ===m?G2:G4,fontFamily:M,fontSize:"9px",cursor:"pointer",fontWeight:f.ausdauer_typ===m?700:400}}>{m}</button>)}</div></div>}
+    {isIntAus&&<div style={{marginBottom:"10px"}}>
+      <Lbl c="INTERVALL-METHODE"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"4px",marginBottom:"6px",width:"100%"}}>
+        {INTERVALL_AUS.map(m=><button key={m} onClick={()=>set("amrap_mode",f.amrap_mode===m?"":m)} style={{padding:"5px 4px",background:f.amrap_mode===m?G+"25":BG2,border:"1px solid "+(f.amrap_mode===m?G:G4),borderRadius:"4px",color:f.amrap_mode===m?G2:G4,fontFamily:M,fontSize:"8px",cursor:"pointer",fontWeight:f.amrap_mode===m?700:400,textAlign:"center",width:"100%",boxSizing:"border-box",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m}</button>)}
+      </div>
+      {f.amrap_mode&&<div style={{marginBottom:"8px"}}><Lbl c="RUNDENZEITEN / DISTANZEN"/><textarea value={f.runden_zeiten} onChange={e=>set("runden_zeiten",e.target.value)} placeholder={"z.B. 4:02 / 4:15 / 4:08\noder: 1,02km / 1,05km"} style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"7px 9px",color:G3,fontFamily:M,fontSize:"11px",resize:"none",height:"55px",outline:"none",boxSizing:"border-box",lineHeight:"1.6"}}/></div>}
+    </div>}
+    {isMilInt&&<div style={{marginBottom:"10px"}}><div style={{display:"flex",gap:"6px",alignItems:"center",marginBottom:"5px"}}><Lbl c="WORKOUT-MODUS" s={{margin:0}}/><button onClick={()=>setShowAmrap(!showAmrap)} style={{padding:"2px 7px",background:G4+"20",border:"1px solid "+G4,borderRadius:"3px",color:G2,fontFamily:M,fontSize:"8px",cursor:"pointer"}}>{showAmrap?"▲":"▼ AMRAP/EMOM..."}</button></div>{showAmrap&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"4px",width:"100%"}}>{AMRAP.map(m=><button key={m} onClick={()=>set("amrap_mode",f.amrap_mode===m?"":m)} style={{padding:"5px 4px",textAlign:"center",width:"100%",boxSizing:"border-box",background:f.amrap_mode===m?G+"25":BG2,border:"1px solid "+(f.amrap_mode===m?G:G4),borderRadius:"4px",color:f.amrap_mode===m?G2:G4,fontFamily:M,fontSize:"9px",cursor:"pointer",fontWeight:f.amrap_mode===m?700:400}}>{m}</button>)}</div>}{f.amrap_mode&&<div style={{color:G2,fontFamily:M,fontSize:"9px",marginTop:"4px",padding:"3px 8px",background:G4+"20",borderRadius:"3px",display:"inline-block"}}>✓ {f.amrap_mode}</div>}</div>}
+    {!isFuss&&!isKampf&&<div style={{marginBottom:"9px",position:"relative"}}>
+      <Lbl c="EINHEITSNAME"/>
+      <input type="text" value={f.session_name} onChange={e=>handleNameChange(e.target.value)} onBlur={()=>setTimeout(()=>setShowNameSugs(false),150)} placeholder="z.B. Push Day..." style={inpS}/>
+      {showNameSugs&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:BG2,border:"1px solid "+G,borderRadius:"4px",zIndex:60,marginTop:"2px",boxShadow:"0 4px 16px rgba(0,0,0,0.5)"}}>
+        <div style={{padding:"5px 10px",color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",borderBottom:"1px solid "+G4}}>LETZTES WORKOUT MIT DIESEM NAMEN</div>
+        {nameSugs.map((s,i)=><div key={i} onClick={()=>applyPastWorkout(s)} style={{padding:"8px 10px",cursor:"pointer",borderBottom:"1px solid "+G4+"30"}}>
+          <div style={{display:"flex",justifyContent:"space-between"}}><div style={{color:G2,fontFamily:C,fontSize:"13px",fontWeight:700}}>{s.session_name}</div><div style={{color:G4,fontFamily:M,fontSize:"8px"}}>{fdl(s.date)}</div></div>
+          <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"2px"}}>{s.exercises_text&&s.exercises_text.split("\n").slice(0,3).map((ex,j)=><span key={j} style={{color:G4,fontFamily:M,fontSize:"8px"}}>{ex.split(" ")[0]}</span>)}{s.duration_raw&&<span style={{color:G3,fontFamily:M,fontSize:"8px"}}>⏱{s.duration_raw}</span>}</div>
+          <div style={{color:G+"80",fontSize:"8px",fontFamily:M,marginTop:"3px"}}>↵ Klicken zum Übernehmen</div>
+        </div>)}
+      </div>}
+    </div>}
+    <div style={{display:"grid",gridTemplateColumns:showIntSlider?"1fr 1fr":"1fr",gap:"8px",marginBottom:"9px",width:"100%"}}>
+      <div><Lbl c="DAUER (H:MM:SS)"/><input type="text" value={f.duration_raw} onChange={e=>set("duration_raw",e.target.value)} placeholder="1:00:00" style={inpS}/></div>
+      {showIntSlider&&<div><Lbl c={"INTENSITÄT: "+f.intensity+"/10"}/><input type="range" min={1} max={10} value={f.intensity} onChange={e=>set("intensity",+e.target.value)} style={{width:"100%",accentColor:f.intensity<4?G:f.intensity<7?G2:G3,marginTop:"8px"}}/></div>}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",marginBottom:"9px",width:"100%"}}>
+      {[["HR DURCHSCHNITT","hr_avg","#fb923c"],["HR MAXIMUM","hr_max","#ef4444"]].map(function(arr){var label=arr[0],key=arr[1],col=arr[2];return <div key={key}><Lbl c={label}/><div style={{display:"flex",gap:"3px",alignItems:"center"}}><input type="number" value={f[key]} onChange={e=>set(key,e.target.value)} placeholder="—" min={30} max={220} style={{width:"100%",background:BG2,border:"1px solid "+col+"30",borderRadius:"4px",padding:"6px 7px",color:col,fontFamily:M,fontSize:"12px",outline:"none",textAlign:"center",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"9px",flexShrink:0}}>bpm</span></div></div>;})}
+    </div>
+    {(isAusdauer||isIntAus)&&<div style={{background:G4+"15",border:"1px solid "+G4,borderRadius:"7px",padding:"10px 12px",marginBottom:"9px",boxSizing:"border-box",width:"100%"}}>
+      <Lbl c="🏃 LAUF / AUSDAUER DETAILS" s={{marginBottom:"8px"}}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",width:"100%",boxSizing:"border-box"}}>
+        <div style={{minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>DISTANZ</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="text" value={f.distance_raw} onChange={e=>{set("distance_raw",e.target.value);var spd=calcSpeed(f.pace_raw,e.target.value,f.duration_raw);if(spd)set("speed_avg",spd);}} placeholder="z.B. 10,5" style={{flex:1,minWidth:0,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 7px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>km</span></div></div>
+        <div style={{minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>PACE (MIN/KM)</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="text" value={f.pace_raw} onChange={e=>{set("pace_raw",e.target.value);var spd=calcSpeed(e.target.value,f.distance_raw,f.duration_raw);if(spd)set("speed_avg",spd);}} placeholder="4:45" style={{flex:1,minWidth:0,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 7px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>min/km</span></div></div>
+        <div style={{minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>GESCHW. Ø</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="text" value={f.speed_avg} onChange={e=>set("speed_avg",e.target.value)} placeholder={calcSpeed(f.pace_raw,f.distance_raw,f.duration_raw)||"km/h"} style={{flex:1,minWidth:0,background:f.speed_avg?BG2:G+"08",border:"1px solid "+(f.speed_avg?G4:G+"50"),borderRadius:"4px",padding:"6px 7px",color:f.speed_avg?G3:G2,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>km/h</span></div></div>
+        <div style={{minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>GESCHW. MAX</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="text" value={f.speed_max} onChange={e=>set("speed_max",e.target.value)} placeholder="18,0" style={{flex:1,minWidth:0,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 7px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>km/h</span></div></div>
+        {[["AEROBER EFFEKT","garmin_aerob","aerob","#60a5fa"],["ANAEROBER EFFEKT","garmin_anaerob","anaerob","#ef4444"]].map(function(row){var lbl=row[0],key=row[1],ak=row[2],col=row[3];var autoVal=autoAusdCalc?autoAusdCalc[ak]:null;var isAuto=!f[key]&&autoVal;return <div key={key} style={{minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>{lbl}{isAuto&&<span style={{color:col,fontSize:"7px",marginLeft:"3px",fontWeight:700}}>AUTO</span>}</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="number" value={f[key]} onChange={e=>set(key,e.target.value)} placeholder={autoVal?String(autoVal):"0–5"} step="0.1" min="0" max="5" style={{flex:1,minWidth:0,background:isAuto?col+"15":BG2,border:"1px solid "+(isAuto?col+"80":G4),borderRadius:"4px",padding:"6px 7px",color:isAuto?col:G3,fontFamily:M,fontSize:"12px",fontWeight:isAuto?700:400,outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>/5</span></div></div>;})}
+        <div style={{gridColumn:"1/-1",minWidth:0,boxSizing:"border-box"}}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"3px",letterSpacing:"1.5px"}}>KALORIEN</div><div style={{display:"flex",alignItems:"center",gap:"3px"}}><input type="number" value={f.garmin_kcal} onChange={e=>set("garmin_kcal",e.target.value)} placeholder="—" style={{flex:1,minWidth:0,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 7px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>kcal</span></div></div>
+      </div>
+      {autoAusdCalc&&<div style={{background:G+"10",borderRadius:"4px",padding:"6px 9px",marginTop:"6px"}}><div style={{color:G,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"3px"}}>APP-SCHÄTZUNG</div><div style={{display:"flex",gap:"10px",flexWrap:"wrap"}}>{autoAusdCalc.autoSpeed>0&&!f.speed_avg&&<span style={{color:G2,fontFamily:M,fontSize:"10px"}}>Ø {autoAusdCalc.autoSpeed} km/h</span>}{autoAusdCalc.paceCalc&&<span style={{color:G3,fontFamily:M,fontSize:"10px"}}>Pace {autoAusdCalc.paceCalc}</span>}{autoAusdCalc.vo2&&<span style={{color:G,fontFamily:M,fontSize:"10px"}}>VO2max ~{autoAusdCalc.vo2}</span>}</div></div>}
+    </div>}
+    {isFuss&&<div style={{background:G4+"15",border:"1px solid "+G4,borderRadius:"6px",padding:"8px 10px",marginBottom:"9px",boxSizing:"border-box",width:"100%"}}>
+      <Lbl c="⚽ FUSSBALL DETAILS" s={{marginBottom:"6px",fontSize:"8px"}}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"5px",marginBottom:"5px"}}>
+        <div><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>DISTANZ</div><div style={{display:"flex",gap:"2px",alignItems:"center"}}><input type="text" value={f.distance_raw} onChange={e=>set("distance_raw",e.target.value)} placeholder="9,5" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"11px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>km</span></div></div>
+        <div><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>KALORIEN</div><div style={{display:"flex",gap:"2px",alignItems:"center"}}><input type="number" value={f.garmin_kcal} onChange={e=>set("garmin_kcal",e.target.value)} placeholder="—" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"11px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>kcal</span></div></div>
+        <div><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>AEROB</div><div style={{display:"flex",gap:"2px",alignItems:"center"}}><input type="number" value={f.garmin_aerob} onChange={e=>set("garmin_aerob",e.target.value)} placeholder="0–5" step="0.1" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"11px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>/5</span></div></div>
+        <div><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>ANAEROB</div><div style={{display:"flex",gap:"2px",alignItems:"center"}}><input type="number" value={f.garmin_anaerob} onChange={e=>set("garmin_anaerob",e.target.value)} placeholder="0–5" step="0.1" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"11px",outline:"none",boxSizing:"border-box"}}/><span style={{color:G4,fontFamily:M,fontSize:"8px",flexShrink:0}}>/5</span></div></div>
+      </div>
+      {(autoFussCalc.appKcal>0||autoFussCalc.pace!=="—")&&<div style={{display:"flex",gap:"8px",flexWrap:"wrap",padding:"4px 6px",background:G+"08",borderRadius:"3px"}}>{autoFussCalc.appKcal>0&&<span style={{color:G2,fontFamily:M,fontSize:"9px"}}>🔥 ~{autoFussCalc.appKcal} kcal</span>}{autoFussCalc.pace!=="—"&&<span style={{color:G3,fontFamily:M,fontSize:"9px"}}>⏱ {autoFussCalc.pace}</span>}</div>}
+    </div>}
+    {isKampf&&<div style={{background:G4+"15",border:"1px solid "+G4,borderRadius:"7px",padding:"11px 13px",marginBottom:"9px"}}>
+      <Lbl c="🥊 KAMPFSPORT DETAILS"/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}}>
+        <div><Lbl c="DISZIPLIN"/><input type="text" value={f.kampf_disziplin||""} onChange={e=>set("kampf_disziplin",e.target.value)} placeholder="BJJ, Boxing, MMA..." style={inpS}/></div>
+        <div><Lbl c="SPARRING-RUNDEN"/><input type="number" value={f.kampf_runden||""} onChange={e=>set("kampf_runden",e.target.value)} placeholder="—" style={inpS}/></div>
+        <div><Lbl c="GARMIN KALORIEN"/><div style={{display:"flex",gap:"4px",alignItems:"center"}}><input type="number" value={f.garmin_kcal} onChange={e=>set("garmin_kcal",e.target.value)} placeholder="—" style={{flex:1,minWidth:0,...inpS}}/><span style={{color:G4,fontFamily:M,fontSize:"9px"}}>kcal</span></div></div>
+        <div><Lbl c="GARMIN AEROB"/><div style={{display:"flex",gap:"4px",alignItems:"center"}}><input type="number" value={f.garmin_aerob} onChange={e=>set("garmin_aerob",e.target.value)} placeholder="0–5" step="0.1" style={{flex:1,minWidth:0,...inpS}}/><span style={{color:G4,fontFamily:M,fontSize:"9px"}}>/5</span></div></div>
+      </div>
+    </div>}
+    {showExercises&&<div style={{marginBottom:"9px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}><Lbl c="ÜBUNGEN" s={{margin:0}}/><div style={{color:G4,fontSize:"8px",fontFamily:M}}>Wird automatisch erkannt</div></div>
+      <textarea value={f.exercises_text} onChange={e=>set("exercises_text",e.target.value)} placeholder="" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"7px 9px",color:G3,fontFamily:M,fontSize:"12px",resize:"none",outline:"none",boxSizing:"border-box",lineHeight:"1.6",height:"100px"}}/>
+      {parsedEx.length>0&&f.exercises_text&&f.exercises_text.trim()&&<div style={{background:G4+"15",border:"1px solid "+G4,borderRadius:"5px",padding:"8px 10px",marginTop:"5px"}}><div style={{color:G,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"5px"}}>✓ ERKANNTE ÜBUNGEN ({parsedEx.length})</div>{parsedEx.map((ex,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:"6px",padding:"3px 0",borderBottom:"1px solid "+G4+"30"}}><div style={{flex:1}}><span style={{color:G3,fontFamily:C,fontWeight:700,fontSize:"12px"}}>{ex.name}</span></div>{(ex.sets>0||ex.reps>0)&&<span style={{color:G,fontFamily:M,fontSize:"11px",fontWeight:700,flexShrink:0}}>{ex.sets>0?ex.sets+"×":""}{ex.reps>0?ex.reps:""}</span>}{ex.weight>0&&<span style={{color:G2,fontFamily:M,fontSize:"10px",flexShrink:0,minWidth:"36px",textAlign:"right"}}>{ex.weight}kg</span>}</div>)}</div>}
+      <div style={{display:"flex",gap:"6px",marginTop:"6px"}}><div style={{flex:1}}><ExInput value={exSearch} onChange={v=>setExSearch(v)} placeholder="Übung suchen..."/></div><button onClick={()=>{if(!exSearch.trim())return;set("exercises_text",(f.exercises_text||"")+exSearch+"\n");setExSearch("");}} disabled={!exSearch.trim()} style={{padding:"6px 10px",background:G4+"20",border:"1px solid "+G,borderRadius:"4px",color:G,fontFamily:M,fontSize:"10px",cursor:"pointer",flexShrink:0,opacity:exSearch.trim()?1:0.4}}>+ ADD</button></div>
+    </div>}
+    <div style={{marginBottom:"12px"}}><Lbl c="ANMERKUNGEN / NOTIZEN"/><textarea value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Wie war es? PRs, Schlaf, Ernährung, Verletzungen..." style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"7px 9px",color:G3,fontFamily:M,fontSize:"11px",resize:"none",height:"55px",outline:"none",boxSizing:"border-box",lineHeight:"1.6"}}/></div>
+    {parsedEx.length>0&&<div style={{marginBottom:"10px"}}>
+      <Lbl c="MUSKELVORSCHAU FÜR DIESES WORKOUT"/>
+      <MuscleBodyMap load={getMuscleLoad(parsedEx,f.intensity||5,parseFloat((f.distance_raw||"").replace(",","."))||0)} size={130}/>
+    </div>}
+    <Btn onClick={handleSave} full>{initEdit?"✓ AKTUALISIEREN":"💾 SPEICHERN"}</Btn>
+    {showPR&&<PRBanner prs={newPRs} onClose={()=>setShowPR(false)}/>}
+  </div>;
+}
+function ArchiveTab(p){
+  const{sessions,setSessions,onEdit}=p;
+  const[filter,setFilter]=useState("all");const[search,setSearch]=useState("");const[exp,setExp]=useState(null);
+  async function del(id){const u=sessions.filter(s=>s.id!==id);setSessions(u);await stSet(SK.s,u);}
+  const filt=[...sessions].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(s=>{if(filter!=="all"&&s.category!==filter)return false;if(search&&!((s.session_name||"").toLowerCase().includes(search.toLowerCase()))&&!((s.description||"").toLowerCase().includes(search.toLowerCase())))return false;return true;});
+  const grp={};filt.forEach(s=>{const k=new Date(s.date).toLocaleDateString("de-DE",{month:"long",year:"numeric"});if(!grp[k])grp[k]=[];grp[k].push(s);});
+  const cc={};sessions.forEach(s=>{cc[s.category]=(cc[s.category]||0)+1;});
+  return <div>
+    <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Suchen..." style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"5px",padding:"8px 12px",color:G3,fontFamily:M,fontSize:"11px",outline:"none",boxSizing:"border-box",marginBottom:"10px"}}/>
+    <div style={{display:"flex",overflowX:"auto",gap:"5px",marginBottom:"14px",paddingBottom:"4px"}}>
+      <button onClick={()=>setFilter("all")} style={{flexShrink:0,padding:"4px 10px",background:filter==="all"?G+"20":BG2,border:"1px solid "+(filter==="all"?G:G4),borderRadius:"4px",color:filter==="all"?G2:G4,fontFamily:M,fontSize:"9px",cursor:"pointer"}}>ALLE ({sessions.length})</button>
+      {CAT.filter(c=>cc[c.id]).map(c=><button key={c.id} onClick={()=>setFilter(c.id===filter?"all":c.id)} style={{flexShrink:0,padding:"4px 10px",background:filter===c.id?c.color+"20":BG2,border:"1px solid "+(filter===c.id?c.color:G4),borderRadius:"4px",color:filter===c.id?c.color:G4,fontFamily:M,fontSize:"9px",cursor:"pointer"}}>{c.icon} {c.label.split(" ").slice(0,2).join(" ")} ({cc[c.id]})</button>)}
+    </div>
+    {Object.entries(grp).map(([month,items])=><div key={month}>
+      <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}}><div style={{color:G,fontFamily:M,fontSize:"9px",letterSpacing:"2px"}}>{month.toUpperCase()}</div><div style={{flex:1,height:"1px",background:G4}}/><div style={{color:G4,fontFamily:M,fontSize:"9px"}}>{items.length}×</div></div>
+      {items.map(s=>{const cat=CAT.find(c=>c.id===s.category),col=s.category_color||cat?.color||G,isE=exp===s.id,sc=s.perf_score!=null?s.perf_score:scoreSession(s);
+        return <div key={s.id} style={{background:BG2,border:"1px solid "+G4,borderLeft:"3px solid "+col,borderRadius:"6px",padding:"10px 12px",marginBottom:"6px"}}>
+          <div onClick={()=>setExp(isE?null:s.id)} style={{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{flex:1}}><div style={{display:"flex",alignItems:"center",gap:"5px"}}><div style={{color:G4,fontSize:"9px",fontFamily:M}}>{fdl(s.date)}</div><span style={{fontSize:"8px",color:col,background:col+"20",padding:"1px 5px",borderRadius:"3px",fontFamily:M}}>{cat?cat.icon:""} {s.category_label||cat?.label}</span></div><div style={{color:G3,fontWeight:700,fontFamily:C,fontSize:"13px",marginTop:"2px"}}>{(s.session_name||"").toUpperCase()}</div></div>
+            <div style={{textAlign:"right",flexShrink:0,marginLeft:"8px"}}><div style={{color:G2,fontFamily:M,fontSize:"13px",fontWeight:700}}>{sc}</div><div style={{color:G,fontFamily:M,fontSize:"9px"}}>{s.duration_raw||m2h(s.duration)}</div><div style={{color:G4,fontSize:"9px",marginTop:"2px"}}>{isE?"▲":"▼"}</div></div>
+          </div>
+          {isE&&<div style={{marginTop:"9px",borderTop:"1px solid "+G4,paddingTop:"9px"}}>
+            {s.description&&<div style={{marginBottom:"6px"}}><Lbl c="NOTIZEN" s={{marginBottom:"2px"}}/><div style={{color:G3,fontSize:"11px"}}>{s.description}</div></div>}
+            {s.exercises_text&&<div style={{marginBottom:"6px"}}><Lbl c="ÜBUNGEN" s={{marginBottom:"2px"}}/><div style={{color:G4,fontSize:"10px",fontFamily:M,lineHeight:"1.7",whiteSpace:"pre-line"}}>{s.exercises_text}</div></div>}
+            <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"6px"}}>
+              {s.hr_avg>0&&<span style={{color:"#fb923c",fontFamily:M,fontSize:"10px"}}>❤ Ø{s.hr_avg}bpm</span>}
+              {s.hr_max>0&&<span style={{color:"#ef4444",fontFamily:M,fontSize:"10px"}}>↑{s.hr_max}bpm</span>}
+              {s.distance_raw&&<span style={{color:G2,fontFamily:M,fontSize:"10px"}}>📍 {s.distance_raw}km</span>}
+              {s.pace_raw&&<span style={{color:G3,fontFamily:M,fontSize:"10px"}}>⏱ {s.pace_raw}/km</span>}
+              {s.speed_avg>0&&<span style={{color:G,fontFamily:M,fontSize:"10px"}}>Ø {fn(s.speed_avg)}km/h</span>}
+              {s.vo2max_est&&<span style={{color:G,fontFamily:M,fontSize:"10px"}}>VO2max ~{s.vo2max_est}</span>}
+            </div>
+            {s.exercises&&s.exercises.length>0&&<div style={{marginBottom:"8px"}}>
+              <Lbl c="BEANSPRUCHTE MUSKELN" s={{marginBottom:"4px"}}/>
+              <MuscleBodyMap load={getSessionMuscleLoad(s)} size={120}/>
+            </div>}
+            <div style={{display:"flex",gap:"6px"}}><button onClick={()=>onEdit&&onEdit(s)} style={{flex:1,padding:"5px",background:G4+"20",border:"1px solid "+G,borderRadius:"4px",color:G2,fontSize:"10px",cursor:"pointer",fontFamily:M}}>✏ BEARBEITEN</button><button onClick={()=>del(s.id)} style={{padding:"5px 10px",background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:"4px",color:"#f87171",fontSize:"10px",cursor:"pointer",fontFamily:M}}>✕</button></div>
+          </div>}
+        </div>;})}
+    </div>)}
+    {!filt.length&&<div style={{textAlign:"center",padding:"40px",color:G4}}><div style={{fontSize:"28px",marginBottom:"8px"}}>🔍</div><div style={{fontFamily:M,fontSize:"10px"}}>NICHTS GEFUNDEN</div></div>}
+  </div>;
+}
+function PopBar(p){const{label,value,bench,lower,neutral,unit}=p;if(!value||isNaN(value))return null;let col,pct;if(neutral){const mid=(bench.lo+bench.hi)/2,range=bench.hi-bench.lo;pct=50+((value-mid)/range)*30;col=value>=bench.lo&&value<=bench.hi?G:value<bench.lo?"#60a5fa":"#ef4444";}else if(lower){pct=Math.max(5,Math.min(95,100-(value/bench.avg)*50));col=value<=bench.vgood?G:value<=bench.good?G2:value<=bench.avg?"#facc15":"#ef4444";}else{pct=Math.max(5,Math.min(95,(value/bench.avg)*50));col=value>=bench.vgood?G:value>=bench.good?G2:value>=bench.avg?"#facc15":"#fb923c";}
+return <div style={{marginBottom:"10px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"3px"}}><span style={{color:G4,fontFamily:M,fontSize:"9px"}}>{label}</span><div style={{display:"flex",gap:"8px",alignItems:"center"}}>{!neutral&&<span style={{color:G4,fontFamily:M,fontSize:"8px"}}>Ø {bench.avg}{unit}</span>}<span style={{color:col,fontFamily:M,fontSize:"11px",fontWeight:700}}>{fn(value)}{unit}</span></div></div><div style={{height:"8px",background:G4+"20",borderRadius:"4px",position:"relative",overflow:"hidden"}}>{neutral&&<div style={{position:"absolute",top:0,bottom:0,left:(bench.lo/(bench.hi*1.1)*100)+"%",width:((bench.hi-bench.lo)/(bench.hi*1.1)*100)+"%",background:G+"20"}}/>}<div style={{height:"100%",width:Math.max(4,Math.min(pct,96))+"%",background:col,borderRadius:"4px",transition:"width 0.8s ease",boxShadow:"0 0 6px "+col+"60"}}/>{!neutral&&<div style={{position:"absolute",top:0,bottom:0,width:"2px",background:G4,left:"50%",opacity:0.6}}/>}</div>{!neutral&&<div style={{display:"flex",justifyContent:"space-between",marginTop:"2px"}}><span style={{color:G4,fontSize:"7px",fontFamily:M}}>{lower?"Niedriger = besser":"Höher = besser"}</span><span style={{color:G4,fontSize:"7px",fontFamily:M}}>Bevölkerungsschnitt ▲</span></div>}</div>;}
+function BodyTab(){
+  const[entries,setEntries]=useState([]);
+  const[f,setF]=useState({date:new Date().toISOString().split("T")[0],weight:"",kfa:"",muscle_mass:"",water:"",visceral:"",vo2max:"",notes:""});
+  useEffect(()=>{stGet(SK.b).then(d=>d&&setEntries(d));},[]);
+  const bmi=f.weight?(f.weight/((H/100)**2)).toFixed(1):"";
+  const bmiCol=!bmi?G4:bmi<18.5?"#60a5fa":bmi<25?G:bmi<30?"#facc15":"#ef4444";
+  const bmiLbl=!bmi?"":bmi<18.5?"Untergewicht":bmi<25?"Normalgewicht":bmi<30?"Übergewicht":"Adipositas";
+  async function save(){const e={id:Date.now(),date:new Date(f.date+"T12:00:00").toISOString(),weight:+f.weight||0,kfa:+f.kfa||0,muscle_mass:+f.muscle_mass||0,water:+f.water||0,bmi:+bmi||0,visceral:+f.visceral||0,vo2max:+f.vo2max||0,notes:f.notes};const u=[...entries,e].sort((a,b)=>new Date(a.date)-new Date(b.date));setEntries(u);await stSet(SK.b,u);setF({date:new Date().toISOString().split("T")[0],weight:"",kfa:"",muscle_mass:"",water:"",visceral:"",vo2max:"",notes:""});}
+  async function del(id){const u=entries.filter(e=>e.id!==id);setEntries(u);await stSet(SK.b,u);}
+  const last=entries[entries.length-1];
+  const chartD=entries.slice(-16).map(e=>({date:fd(e.date),Gewicht:e.weight||undefined,KFA:e.kfa||undefined,Muskel:e.muscle_mass||undefined,VO2max:e.vo2max||undefined}));
+  return <div>
+    <Lbl c="KÖRPERZUSAMMENSETZUNG"/>
+    <Card style={{marginBottom:"10px",padding:"10px 12px"}}>
+      <div style={{display:"flex",gap:"6px",marginBottom:"6px",alignItems:"center"}}><Lbl c="DATUM" s={{margin:0,fontSize:"8px"}}/><input type="date" value={f.date} onChange={e=>setF(prev=>({...prev,date:e.target.value}))} style={{flex:1,background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 6px",color:G3,fontFamily:M,fontSize:"11px",outline:"none"}}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"5px",marginBottom:"6px"}}>
+        {[["KG","weight","kg","0.1"],["KFA","kfa","%","0.5"],["MUSKEL","muscle_mass","%","0.1"],["WASSER","water","%","0.1"],["VISZERAL","visceral","Lvl","1"],["VO2MAX","vo2max","","0.1"]].map(function(arr){var l=arr[0],k=arr[1],u=arr[2],s=arr[3];return <div key={k}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>{l}{u?" ("+u+")":""}</div><input type="number" value={f[k]} onChange={e=>setF(prev=>({...prev,[k]:e.target.value}))} step={s} placeholder="—" style={{width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box",textAlign:"center"}}/></div>;})}
+        <div><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>BMI (auto)</div><div style={{padding:"4px 5px",background:BG,border:"1px solid "+G4,borderRadius:"3px",textAlign:"center"}}><span style={{color:bmiCol,fontFamily:M,fontSize:"12px",fontWeight:700}}>{bmi||"—"}</span></div></div>
+      </div>
+      <Btn onClick={save} full small disabled={!f.weight}>SPEICHERN</Btn>
+    </Card>
+    {last&&<>
+      <Card style={{marginBottom:"10px"}}><Lbl c="IM VERGLEICH ZUR BEVÖLKERUNG"/><div style={{color:G4,fontSize:"8px",fontFamily:M,marginBottom:"8px"}}>Referenz: sportlich aktiver Mann ~30J</div><PopBar label="Körperfettanteil" value={last.kfa} bench={BENCH.kfa} lower unit="%"/><PopBar label="Muskelmasse" value={last.muscle_mass} bench={BENCH.muscle} unit="%"/><PopBar label="BMI" value={last.bmi} bench={BENCH.bmi} neutral unit=""/>{last.vo2max>0&&<PopBar label="VO2max" value={last.vo2max} bench={BENCH.vo2max} unit=" ml/kg/min"/>}</Card>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px",marginBottom:"10px"}}>{[{l:"GEWICHT",v:fn(last.weight),u:"kg"},{l:"KFA",v:fn(last.kfa),u:"%"},{l:"MUSKEL",v:fn(last.muscle_mass),u:"%"},{l:"WASSER",v:fn(last.water),u:"%"},{l:"VISZERAL",v:fn(last.visceral),u:"Lvl"},{l:"BMI",v:fn(last.bmi),u:""}].map(s=><div key={s.l} style={{background:BG2,border:"1px solid "+G4,borderRadius:"5px",padding:"8px",textAlign:"center"}}><div style={{color:G4,fontSize:"7.5px",letterSpacing:"1px",fontFamily:M}}>{s.l}</div><div style={{color:G2,fontSize:"18px",fontWeight:800,fontFamily:C}}>{s.v}{s.u}</div></div>)}</div>
+    </>}
+    {chartD.length>=2&&<>
+      <Card style={{marginBottom:"8px"}}><Lbl c="GEWICHT & KFA"/><ResponsiveContainer width="100%" height={100}><LineChart data={chartD}><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis tick={{fill:G4,fontSize:9}}/><Tooltip contentStyle={TT}/><Legend wrapperStyle={{fontSize:"10px"}}/><Line type="monotone" dataKey="Gewicht" stroke={G} strokeWidth={2} dot={{r:2}} connectNulls/><Line type="monotone" dataKey="KFA" stroke="#fb923c" strokeWidth={2} dot={{r:2}} connectNulls/></LineChart></ResponsiveContainer></Card>
+      <Card style={{marginBottom:"8px"}}><Lbl c="MUSKELMASSE & VO2MAX"/><ResponsiveContainer width="100%" height={100}><LineChart data={chartD}><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis tick={{fill:G4,fontSize:9}}/><Tooltip contentStyle={TT}/><Legend wrapperStyle={{fontSize:"10px"}}/><Line type="monotone" dataKey="Muskel" stroke={G2} strokeWidth={2} dot={{r:2}} connectNulls/><Line type="monotone" dataKey="VO2max" stroke={G3} strokeWidth={2} dot={{r:2}} connectNulls/></LineChart></ResponsiveContainer></Card>
+    </>}
+    {[...entries].reverse().slice(0,5).map(e=><Card key={e.id} al={G4}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{color:G,fontSize:"9px",fontFamily:M}}>{fdl(e.date)}</div><div style={{display:"flex",gap:"8px",marginTop:"3px",flexWrap:"wrap"}}>{e.weight>0&&<span style={{color:G3,fontFamily:M,fontSize:"11px"}}>{fn(e.weight)}kg</span>}{e.kfa>0&&<span style={{color:"#fb923c",fontFamily:M,fontSize:"11px"}}>KFA {fn(e.kfa)}%</span>}{e.muscle_mass>0&&<span style={{color:G2,fontFamily:M,fontSize:"11px"}}>Muskel {fn(e.muscle_mass)}%</span>}{e.vo2max>0&&<span style={{color:G,fontFamily:M,fontSize:"11px"}}>VO2 {fn(e.vo2max)}</span>}</div></div><button onClick={()=>del(e.id)} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"11px"}}>✕</button></div></Card>)}
+    {!entries.length&&<div style={{textAlign:"center",padding:"40px",color:G4}}><div style={{fontSize:"28px",marginBottom:"8px"}}>⚖️</div><div style={{fontFamily:M,fontSize:"10px"}}>KEINE KÖRPERDATEN</div></div>}
+  </div>;
+}
+function SleepTab(){
+  const[entries,setEntries]=useState([]);
+  const[f,setF]=useState({date:new Date().toISOString().split("T")[0],duration_raw:"",sleep_score:"",hrv:"",resting_hr:"",deep_raw:"",rem_raw:"",notes:""});
+  useEffect(()=>{stGet(SK.sl).then(d=>d&&setEntries(d));},[]);
+  const fields=[["SCHLAFDAUER","duration_raw","h"],["SLEEP SCORE","sleep_score","/100"],["HRV","hrv","ms"],["RUHEPULS","resting_hr","bpm"],["TIEFSCHLAF","deep_raw","h"],["REM","rem_raw","h"]];
+  async function save(){const e={id:Date.now(),date:new Date(f.date+"T12:00:00").toISOString(),duration:p2m(f.duration_raw),duration_raw:f.duration_raw,sleep_score:+f.sleep_score||0,hrv:+f.hrv||0,resting_hr:+f.resting_hr||0,deep:p2m(f.deep_raw),deep_raw:f.deep_raw,rem:p2m(f.rem_raw),rem_raw:f.rem_raw,notes:f.notes};const u=[...entries,e].sort((a,b)=>new Date(a.date)-new Date(b.date));setEntries(u);await stSet(SK.sl,u);setF({date:new Date().toISOString().split("T")[0],duration_raw:"",sleep_score:"",hrv:"",resting_hr:"",deep_raw:"",rem_raw:"",notes:""});}
+  async function del(id){const u=entries.filter(e=>e.id!==id);setEntries(u);await stSet(SK.sl,u);}
+  function sc(s){return !s?"#334155":s>=80?G:s>=60?G2:"#ef4444";}
+  function isTimeUnit(u){return u==="h"||u==="min";}
+  const inpS={flex:1,background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 5px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",width:"100%",boxSizing:"border-box",textAlign:"center"};
+  return <div>
+    <Lbl c="SLEEP & RECOVERY"/>
+    <Card style={{marginBottom:"10px",padding:"10px 12px"}}>
+      <div style={{display:"flex",gap:"6px",marginBottom:"6px",alignItems:"center"}}><Lbl c="DATUM" s={{margin:0,fontSize:"8px"}}/><input type="date" value={f.date} onChange={e=>setF(prev=>({...prev,date:e.target.value}))} style={{flex:1,background:BG2,border:"1px solid "+G4,borderRadius:"3px",padding:"4px 6px",color:G3,fontFamily:M,fontSize:"11px",outline:"none"}}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"5px",marginBottom:"6px"}}>
+        {fields.map(function(arr){var l=arr[0],k=arr[1],u=arr[2];var short={SCHLAFDAUER:"DAUER","SLEEP SCORE":"SCORE",RUHEPULS:"HR RUHE",TIEFSCHLAF:"TIEF",REM:"REM",HRV:"HRV"}[l]||l;return <div key={k}><div style={{color:G4,fontSize:"7.5px",fontFamily:M,marginBottom:"2px"}}>{short}</div>{isTimeUnit(u)?React.createElement("input",{type:"text",value:f[k],onChange:e=>setF(prev=>({...prev,[k]:e.target.value})),placeholder:"H:MM",style:inpS}):React.createElement("input",{type:"number",value:f[k],onChange:e=>setF(prev=>({...prev,[k]:e.target.value})),placeholder:"—",style:inpS})}</div>;})}
+      </div>
+      <Btn onClick={save} full small>SPEICHERN</Btn>
+    </Card>
+    {entries.length>=2&&<>
+      <Card style={{marginBottom:"8px"}}><Lbl c="SCHLAFDAUER"/><ResponsiveContainer width="100%" height={90}><AreaChart data={entries.slice(-14).map(e=>({date:fd(e.date),Dauer:e.duration>0?+(e.duration/60).toFixed(1):undefined}))}><defs><linearGradient id="slg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={G} stopOpacity={0.3}/><stop offset="95%" stopColor={G} stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis tick={{fill:G4,fontSize:9}} unit="h"/><Tooltip contentStyle={TT}/><Area type="monotone" dataKey="Dauer" stroke={G} fill="url(#slg)" strokeWidth={2} dot={{r:2}} connectNulls/></AreaChart></ResponsiveContainer></Card>
+      <Card style={{marginBottom:"8px"}}><Lbl c="HRV & RUHEPULS"/><ResponsiveContainer width="100%" height={90}><LineChart data={entries.slice(-14).map(e=>({date:fd(e.date),HRV:e.hrv||undefined,"HR Ruhe":e.resting_hr||undefined}))}><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis tick={{fill:G4,fontSize:9}}/><Tooltip contentStyle={TT}/><Legend wrapperStyle={{fontSize:"10px"}}/><Line type="monotone" dataKey="HRV" stroke={G2} strokeWidth={2} dot={{r:2}} connectNulls/><Line type="monotone" dataKey="HR Ruhe" stroke="#fb923c" strokeWidth={2} dot={{r:2}} connectNulls/></LineChart></ResponsiveContainer></Card>
+      <Card style={{marginBottom:"8px"}}><Lbl c="SLEEP SCORE"/><ResponsiveContainer width="100%" height={90}><AreaChart data={entries.slice(-14).map(e=>({date:fd(e.date),Score:e.sleep_score||undefined}))}><defs><linearGradient id="ssg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={G2} stopOpacity={0.3}/><stop offset="95%" stopColor={G2} stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke={G4+"30"}/><XAxis dataKey="date" tick={{fill:G4,fontSize:9}}/><YAxis domain={[0,100]} tick={{fill:G4,fontSize:9}}/><Tooltip contentStyle={TT}/><Area type="monotone" dataKey="Score" stroke={G2} fill="url(#ssg)" strokeWidth={2} dot={{r:2}} connectNulls/></AreaChart></ResponsiveContainer></Card>
+    </>}
+    {[...entries].reverse().slice(0,6).map(e=><Card key={e.id} al={sc(e.sleep_score)}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{color:G,fontSize:"9px",fontFamily:M}}>{fdl(e.date)}</div><div style={{display:"flex",gap:"10px",marginTop:"3px",flexWrap:"wrap"}}>{e.duration>0&&<span style={{color:G3,fontFamily:M,fontSize:"11px"}}>🌙 {e.duration_raw||hms(e.duration*60)}</span>}{e.sleep_score>0&&<span style={{color:sc(e.sleep_score),fontFamily:M,fontSize:"11px",fontWeight:700}}>Score {e.sleep_score}</span>}{e.hrv>0&&<span style={{color:G2,fontFamily:M,fontSize:"10px"}}>HRV {fn(e.hrv)}ms</span>}{e.resting_hr>0&&<span style={{color:G3,fontFamily:M,fontSize:"10px"}}>♥ {fn(e.resting_hr)}bpm</span>}</div></div><button onClick={()=>del(e.id)} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"11px"}}>✕</button></div></Card>)}
+    {!entries.length&&<div style={{textAlign:"center",padding:"40px",color:G4}}><div style={{fontSize:"28px",marginBottom:"8px"}}>😴</div><div style={{fontFamily:M,fontSize:"10px"}}>KEINE SCHLAFDATEN</div></div>}
+  </div>;
+}
+function PhotoFoodImport(p){
+  const[loading,setLoading]=useState(false);const[preview,setPreview]=useState(null);const[err,setErr]=useState("");
+  const fileRef=useRef();
+  async function handleFile(file){if(!file)return;setLoading(true);setErr("");const reader=new FileReader();reader.onload=async e=>{const full=e.target.result;setPreview(full);const b64=full.split(",")[1];try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:"Analysiere Foto. Schaetze Naehrwerte. Antworte NUR JSON: {name,kcal,protein,carbs,fat,fiber,notes}"}]}]})});const d=await res.json();const txt=d.content.map(b=>b.text||"").join("").replace(/```json|```/g,"").trim();const parsed=JSON.parse(txt);p.onResult(parsed);}catch(e){setErr("Analyse fehlgeschlagen: "+e.message);}setLoading(false);};reader.readAsDataURL(file);}
+  return <div style={{background:G4+"15",border:"1px solid "+G,borderRadius:"7px",padding:"12px 14px",marginBottom:"10px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}><Lbl c="📷 FOTO ANALYSIEREN" s={{margin:0}}/><button onClick={p.onClose} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"13px"}}>✕</button></div>
+    <div style={{color:G4,fontSize:"9px",fontFamily:M,marginBottom:"8px",lineHeight:"1.6"}}>Mache ein Foto von: Mahlzeit · Nährwerttabelle · Produkt · Restaurant-Menü</div>
+    {!preview&&<div onClick={()=>fileRef.current?.click()} style={{border:"2px dashed "+G4,borderRadius:"6px",padding:"24px",textAlign:"center",cursor:"pointer"}}><div style={{fontSize:"28px",marginBottom:"6px"}}>📷</div><div style={{color:G,fontFamily:M,fontSize:"10px"}}>FOTO HOCHLADEN</div></div>}
+    <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFile(e.target.files[0])}/>
+    {preview&&<img src={preview} alt="" style={{width:"100%",borderRadius:"5px",maxHeight:"140px",objectFit:"cover",marginBottom:"8px"}}/>}
+    {loading&&<div style={{textAlign:"center",padding:"14px",color:G,fontFamily:M,fontSize:"11px"}}>⚙ KI ANALYSIERT NÄHRWERTE...</div>}
+    {err&&<div style={{color:"#ef4444",fontFamily:M,fontSize:"10px",marginTop:"4px"}}>{err}</div>}
+  </div>;
+}
+function FoodTab(p){
+  const{sessions,activityBurn,activityData}=p;
+  const[entries,setEntries]=useState([]);const[phase,setPhase]=useState(-0.4);const[bw,setBw]=useState(85);const[bEntries,setBEntries]=useState([]);
+  const em={date:new Date().toISOString().split("T")[0],name:"",kcal:"",protein:"",carbs:"",fat:"",fiber:"",notes:""};
+  const[f,setF]=useState({...em});const[period,setPeriod]=useState("today");const[showSet,setShowSet]=useState(false);const[photoMode,setPhotoMode]=useState(false);
+  const[macroRatios,setMacroRatios]=useState({protLo:1.8,protHi:2.2,fatLo:0.8,fatHi:1.0});
+  useEffect(()=>{stGet(SK.n).then(d=>{if(d){setEntries(d.entries||[]);if(d.phase!==undefined)setPhase(d.phase);if(d.bw)setBw(d.bw);if(d.macroRatios)setMacroRatios(d.macroRatios);}});stGet(SK.b).then(d=>{if(d&&d.length>0)setBEntries(d);});},[]);
+  useEffect(()=>{if(bEntries.length>0){const l=bEntries[bEntries.length-1];if(l.weight>0)setBw(l.weight);}},[bEntries]);
+  async function persist(e,ph,w,mr){await stSet(SK.n,{entries:e,phase:ph,bw:w,macroRatios:mr||macroRatios});}
+  async function saveMeal(){if(!f.kcal&&!f.protein&&!f.carbs&&!f.fat&&!f.fiber)return;const m={id:Date.now(),date:new Date(f.date+"T12:00:00").toISOString(),name:f.name||"Mahlzeit",kcal:+f.kcal||0,protein:+f.protein||0,carbs:+f.carbs||0,fat:+f.fat||0,fiber:+f.fiber||0,notes:f.notes};const u=[...entries,m].sort((a,b)=>new Date(a.date)-new Date(b.date));setEntries(u);await persist(u,phase,bw);setF(prev=>({...em,date:prev.date}));}
+  async function del(id){const u=entries.filter(e=>e.id!==id);setEntries(u);await persist(u,phase,bw);}
+  async function hPh(v){setPhase(v);await persist(entries,v,bw);}
+  async function saveMacroRatios(mr){setMacroRatios(mr);await persist(entries,phase,bw,mr);}
+  const todayStr=new Date().toDateString();const todaySess=sessions.filter(s=>new Date(s.date).toDateString()===todayStr).slice(-1)[0];
+  const tgt=dayTgt(bw,phase,todaySess,macroRatios,activityData?.steps||0,activityData?.floors||0,(activityData?.burn?.actKcal||0)+(activityBurn||0));
+  const t2=new Date();t2.setHours(0,0,0,0);
+  const starts={today:t2,week:new Date(t2.getFullYear(),t2.getMonth(),t2.getDate()-6),month:new Date(t2.getFullYear(),t2.getMonth(),1)};
+  const pStart=starts[period];const pDays={today:1,week:7,month:new Date(t2.getFullYear(),t2.getMonth()+1,0).getDate()}[period];
+  const pE=entries.filter(e=>new Date(e.date)>=pStart);
+  function sum(k){return pE.reduce((a,e)=>a+(e[k]||0),0);}
+  const tot={kcal:sum("kcal"),prot:sum("protein"),carbs:sum("carbs"),fat:sum("fat"),fiber:sum("fiber")};
+  const tM=entries.filter(e=>new Date(e.date).toDateString()===todayStr);
+  const tT={kcal:tM.reduce((a,m)=>a+m.kcal,0),prot:tM.reduce((a,m)=>a+m.protein,0),carbs:tM.reduce((a,m)=>a+m.carbs,0),fat:tM.reduce((a,m)=>a+m.fat,0)};
+  const pl=phLabel(phase);
+  const inpS={width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 8px",color:G3,fontFamily:M,fontSize:"12px",outline:"none",boxSizing:"border-box"};
+  function MBar(bp){const{label,val,target,lo,hi,col}=bp;const pct=Math.min(val/Math.max(target,1)*100,115);const ok=lo&&hi?val>=lo&&val<=hi:pct>=90&&pct<=110;const over=val>target*1.1;const bc=over?"#ef4444":ok?col:"#facc15";return <div style={{marginBottom:"9px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"3px"}}><span style={{color:G4,fontFamily:M,fontSize:"10px"}}>{label}</span><span style={{color:bc,fontFamily:M,fontSize:"10px",fontWeight:700}}>{val}<span style={{color:G4,fontSize:"8px"}}>/{target}g</span>{lo&&hi&&<span style={{color:G4,fontSize:"8px"}}> ({lo}-{hi}g)</span>} <span style={{color:ok?G:over?"#ef4444":"#facc15",fontSize:"8px"}}>{val===0?"—":val<(lo||target*0.7)?"ZU WENIG":ok?"✓":over?"ZU VIEL":"~OK"}</span></span></div><div style={{height:"6px",background:G4+"20",borderRadius:"3px",overflow:"hidden"}}><div style={{height:"100%",width:Math.min(pct,100)+"%",background:bc,borderRadius:"3px",transition:"width 0.8s ease"}}/></div></div>;}
+  return <div>
+    <div style={{background:BG2,border:"1px solid "+pl.col+"30",borderRadius:"8px",padding:"12px 14px",marginBottom:"12px"}}>
+      <style>{".phr{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#ef4444 0%,#fb923c 18%,#facc15 33%,"+G+" 50%,"+G2+" 66%,#a78bfa 82%,#f472b6 100%);outline:none;cursor:pointer;}.phr::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#f1f5f9;border:3px solid "+pl.col+";box-shadow:0 2px 8px rgba(0,0,0,0.5);cursor:pointer;}.phr::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#f1f5f9;border:3px solid "+pl.col+";cursor:pointer;}"}</style>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:"10px"}}><Lbl c="ERNÄHRUNGSPHASE" s={{margin:0}}/><div style={{color:pl.col,fontFamily:C,fontSize:"15px",fontWeight:900}}>{pl.short}</div></div>
+      <div style={{paddingBottom:"18px",position:"relative"}}><input type="range" min="-1" max="1" step="0.01" value={phase} onChange={e=>hPh(+e.target.value)} className="phr"/><div style={{position:"absolute",bottom:0,left:0,right:0,display:"flex",justifyContent:"space-between"}}><span style={{color:"#ef4444",fontSize:"7px",fontFamily:M}}>DEF</span><span style={{color:G,fontSize:"7px",fontFamily:M}}>ERHALT</span><span style={{color:"#f472b6",fontSize:"7px",fontFamily:M}}>BULK</span></div></div>
+      <div style={{padding:"7px 10px",background:pl.col+"10",borderRadius:"4px",borderLeft:"3px solid "+pl.col}}><div style={{color:pl.col,fontFamily:C,fontSize:"13px",fontWeight:800}}>{pl.label}</div></div>
+    </div>
+    <div style={{display:"flex",gap:"5px",marginBottom:"12px"}}>
+      {[["today","Heute"],["week","Woche"],["month","Monat"]].map(function(arr){var id=arr[0],label=arr[1];return <button key={id} onClick={()=>setPeriod(id)} style={{flex:1,padding:"6px 4px",background:period===id?G+"20":BG2,border:"1px solid "+(period===id?G:G4),borderRadius:"4px",color:period===id?G2:G4,fontFamily:M,fontSize:"9px",cursor:"pointer"}}>{label}</button>;})}
+      <button onClick={()=>setShowSet(!showSet)} style={{padding:"6px 10px",background:showSet?G+"15":BG2,border:"1px solid "+(showSet?G:G4),borderRadius:"4px",color:showSet?G2:G4,fontFamily:M,fontSize:"9px",cursor:"pointer"}}>⚙</button>
+    </div>
+    {showSet&&<Card style={{marginBottom:"12px"}}>
+      <Lbl c="KÖRPER & MAKROS"/>
+      <div style={{display:"flex",gap:"8px",alignItems:"center",marginBottom:"12px"}}><div style={{flex:1}}><Lbl c="GEWICHT" s={{marginBottom:"3px"}}/><div style={{display:"flex",gap:"4px",alignItems:"center"}}><input type="number" value={bw} onChange={e=>{setBw(+e.target.value);persist(entries,phase,+e.target.value);}} step="0.5" style={{flex:1,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"6px 8px",color:G2,fontFamily:M,fontSize:"13px",outline:"none"}}/><span style={{color:G4,fontFamily:M,fontSize:"10px"}}>kg</span></div></div>
+        <div style={{flex:1}}><Lbl c="SCHRITTE HEUTE" s={{marginBottom:"3px"}}/><div style={{color:G3,fontSize:"11px",fontFamily:M,padding:"7px 0"}}>{activityData?.steps>0?((activityData.steps/1000).toFixed(1)+"k"):tgt.actLabel}</div></div>
+      </div>
+
+    </Card>}
+    <Card style={{marginBottom:"12px"}}>
+      <div style={{color:G4,fontSize:"8.5px",fontFamily:M,letterSpacing:"2px",marginBottom:"5px"}}>ZIELE HEUTE · {bw}kg · {tgt.actLabel}{activityData?.steps>0&&<span style={{color:G4,marginLeft:"5px"}}>({(activityData.steps/1000).toFixed(1)}k Schr.)</span>}{todaySess&&<span style={{color:G2,marginLeft:"6px"}}>⚡ Training</span>}</div>
+      <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginBottom:"6px"}}><span style={{color:G4,fontSize:"8px",fontFamily:M}}>TDEE {tgt.tdee}</span><span style={{color:phase<0?"#fb923c":G2,fontSize:"8px",fontFamily:M}}>{tgt.phOff>0?"+":""}{tgt.phOff} Phase</span>{tgt.sMod>0&&<span style={{color:G2,fontSize:"8px",fontFamily:M}}>+{tgt.sMod} Training</span>}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px"}}>{[{l:"KCAL",v:tgt.kcal,c:"#facc15"},{l:"EIWEISS",v:tgt.protLo+"-"+tgt.protHi,c:G},{l:"FETT",v:tgt.fatLo+"-"+tgt.fatHi,c:G2},{l:"KH",v:"~"+tgt.carbs,c:G3}].map(s=><div key={s.l} style={{background:BG,borderRadius:"4px",padding:"5px",textAlign:"center"}}><div style={{color:G4,fontSize:"7px",fontFamily:M}}>{s.l}</div><div style={{color:s.c,fontSize:"12px",fontWeight:800,fontFamily:C}}>{s.v}</div></div>)}</div>
+    </Card>
+    {period==="today"&&<div style={{background:BG2,border:"1px solid "+(tT.kcal>tgt.kcal?"#ef4444":G4),borderRadius:"8px",padding:"12px 16px",marginBottom:"12px",textAlign:"center"}}><div style={{color:G4,fontSize:"8px",fontFamily:M,marginBottom:"4px"}}>KALORIEN HEUTE</div><div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:"6px"}}><span style={{color:tT.kcal>tgt.kcal?"#ef4444":G2,fontFamily:C,fontSize:"36px",fontWeight:900,lineHeight:1}}>{tT.kcal.toLocaleString("de-DE")}</span><span style={{color:G4,fontFamily:M,fontSize:"11px"}}>/ {tgt.kcal.toLocaleString("de-DE")} kcal</span></div><div style={{marginTop:"7px",height:"7px",background:G4+"20",borderRadius:"4px",overflow:"hidden"}}><div style={{height:"100%",width:Math.min(tT.kcal/tgt.kcal*100,100)+"%",background:tT.kcal>tgt.kcal?"#ef4444":G,borderRadius:"4px",transition:"width 0.8s ease"}}/></div><div style={{marginTop:"5px",color:tT.kcal>tgt.kcal?"#ef4444":G,fontFamily:M,fontSize:"9px"}}>{tT.kcal>tgt.kcal?(tT.kcal-tgt.kcal)+" kcal ÜBER ZIEL":(tgt.kcal-tT.kcal)+" kcal noch verfügbar"}</div></div>}
+    <Card style={{marginBottom:"12px"}}>
+      <Lbl c="MAKRO-ZIELE PRO KG KÖRPERGEWICHT"/>
+      {[{label:"🥩 EIWEISS",keyLo:"protLo",keyHi:"protHi",min:0.8,max:3.5,step:0.05,col:G},{label:"🥑 FETT",keyLo:"fatLo",keyHi:"fatHi",min:0.3,max:2.5,step:0.05,col:G2}].map(function(sl){const lo=macroRatios[sl.keyLo],hi=macroRatios[sl.keyHi],loG=Math.round(bw*lo),hiG=Math.round(bw*hi),pctLo=((lo-sl.min)/(sl.max-sl.min)*100).toFixed(1),pctHi=((hi-sl.min)/(sl.max-sl.min)*100).toFixed(1);return <div key={sl.label} style={{marginBottom:"12px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}><span style={{color:G4,fontFamily:M,fontSize:"9px"}}>{sl.label}</span><span style={{color:sl.col,fontFamily:M,fontSize:"10px",fontWeight:700}}>{lo.toFixed(2)}–{hi.toFixed(2)}<span style={{color:G4,fontSize:"8px"}}> g/kg</span><span style={{color:G4,fontSize:"8px",marginLeft:"6px"}}>({loG}–{hiG}g)</span></span></div><div style={{position:"relative",height:"20px",marginBottom:"4px"}}><div style={{position:"absolute",top:"8px",left:0,right:0,height:"4px",background:G4+"30",borderRadius:"2px"}}/><div style={{position:"absolute",top:"8px",left:pctLo+"%",right:(100-pctHi)+"%",height:"4px",background:sl.col,borderRadius:"2px"}}/><input type="range" min={sl.min} max={sl.max} step={sl.step} value={lo} onChange={e=>{const v=Math.min(+e.target.value,hi-sl.step);saveMacroRatios({...macroRatios,[sl.keyLo]:+v.toFixed(2)});}} style={{position:"absolute",width:"100%",height:"4px",top:"8px",appearance:"none",WebkitAppearance:"none",background:"transparent",outline:"none",cursor:"pointer",accentColor:sl.col}}/><input type="range" min={sl.min} max={sl.max} step={sl.step} value={hi} onChange={e=>{const v=Math.max(+e.target.value,lo+sl.step);saveMacroRatios({...macroRatios,[sl.keyHi]:+v.toFixed(2)});}} style={{position:"absolute",width:"100%",height:"4px",top:"8px",appearance:"none",WebkitAppearance:"none",background:"transparent",outline:"none",cursor:"pointer",accentColor:sl.col}}/></div><div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:G4,fontSize:"7.5px",fontFamily:M}}>{sl.min} g/kg</span><span style={{color:G4,fontSize:"7.5px",fontFamily:M}}>{sl.max} g/kg</span></div></div>;})}
+      <div style={{background:G4+"15",borderRadius:"4px",padding:"6px 10px",marginTop:"4px"}}><div style={{color:G4,fontSize:"8px",fontFamily:M,marginBottom:"2px"}}>🍚 KOHLENHYDRATE (AUTO)</div><div style={{color:G3,fontFamily:M,fontSize:"12px",fontWeight:700}}>~{Math.round(Math.max(0,tgt.kcal-Math.round(bw*(macroRatios.protLo+macroRatios.protHi)/2)*4-Math.round(bw*(macroRatios.fatLo+macroRatios.fatHi)/2)*9)/4)}g <span style={{color:G4,fontSize:"8px"}}>= Kalorien-Rest</span></div></div>
+    </Card>
+    <Card style={{marginBottom:"12px"}}><Lbl c={"MAKROS "+(period==="today"?"HEUTE":period==="week"?"DIESE WOCHE":"DIESEN MONAT")}/>
+      <MBar label="🥩 Eiweiß" val={tot.prot} target={tgt.prot*pDays} lo={tgt.protLo*pDays} hi={tgt.protHi*pDays} col={G}/>
+      <MBar label="🥑 Fett" val={tot.fat} target={tgt.fat*pDays} lo={tgt.fatLo*pDays} hi={tgt.fatHi*pDays} col={G2}/>
+      <MBar label="🌿 Ballaststoffe" val={tot.fiber} target={tgt.fiber*pDays} col={G3}/>
+      <MBar label="🍚 Kohlenhydrate" val={tot.carbs} target={tgt.carbs*pDays} col={G}/>
+      {period!=="today"&&<div style={{borderTop:"1px solid "+G4,paddingTop:"9px",marginTop:"4px",display:"flex",justifyContent:"space-between"}}><span style={{color:G4,fontFamily:M,fontSize:"10px"}}>🔥 Kalorien gesamt</span><span style={{color:tot.kcal>tgt.kcal*pDays?"#ef4444":G,fontFamily:M,fontSize:"13px",fontWeight:700}}>{tot.kcal.toLocaleString("de-DE")}<span style={{color:G4,fontSize:"9px"}}> / {(tgt.kcal*pDays).toLocaleString("de-DE")}</span></span></div>}
+    </Card>
+    <div style={{display:"flex",gap:"6px",marginBottom:"10px",alignItems:"center"}}><Lbl c="MAHLZEIT EINTRAGEN" s={{margin:0,flex:1}}/><button onClick={()=>setPhotoMode(!photoMode)} style={{padding:"5px 10px",background:photoMode?G+"15":BG2,border:"1px solid "+(photoMode?G:G4),borderRadius:"4px",color:photoMode?G2:G4,fontFamily:C,fontSize:"10px",letterSpacing:"1px",fontWeight:700,cursor:"pointer"}}>📷 FOTO</button></div>
+    {photoMode&&<PhotoFoodImport onResult={(res)=>{setF(prev=>({...prev,name:res.name||prev.name,kcal:res.kcal||prev.kcal,protein:res.protein||prev.protein,carbs:res.carbs||prev.carbs,fat:res.fat||prev.fat}));setPhotoMode(false);}} onClose={()=>setPhotoMode(false)}/>}
+    <div style={{background:BG2,border:"1px solid "+G4,borderRadius:"8px",padding:"12px 14px",marginBottom:"12px"}}>
+      {tT.kcal>0&&<div style={{display:"flex",gap:"8px",flexWrap:"wrap",padding:"6px 10px",background:G4+"15",borderRadius:"4px",marginBottom:"9px"}}><span style={{color:G4,fontSize:"8px",fontFamily:M}}>HEUTE:</span><span style={{color:"#facc15",fontFamily:M,fontSize:"10px",fontWeight:700}}>🔥{tT.kcal}</span><span style={{color:G,fontFamily:M,fontSize:"10px"}}>🥩{tT.prot}g</span><span style={{color:G2,fontFamily:M,fontSize:"10px"}}>🍚{tT.carbs}g</span><span style={{color:G3,fontFamily:M,fontSize:"10px"}}>🥑{tT.fat}g</span><span style={{color:G4,fontSize:"8px",fontFamily:M,marginLeft:"auto"}}>{tM.length} items</span></div>}
+      <div style={{marginBottom:"7px"}}><Lbl c="DATUM"/><input type="date" value={f.date} onChange={e=>setF(prev=>({...prev,date:e.target.value}))} style={inpS}/></div>
+      <div style={{marginBottom:"7px"}}><Lbl c="MAHLZEIT"/><input type="text" value={f.name} onChange={e=>setF(prev=>({...prev,name:e.target.value}))} placeholder="Frühstück, Mittagessen..." style={inpS}/></div>
+      <div style={{marginBottom:"7px"}}><Lbl c={"KALORIEN ("+Math.max(0,tgt.kcal-tT.kcal)+" noch)"}/><input type="number" value={f.kcal} onChange={e=>setF(prev=>({...prev,kcal:e.target.value}))} placeholder="0" style={{...inpS,color:"#facc15",border:"1px solid rgba(250,204,21,0.3)",fontSize:"20px",fontWeight:700,padding:"8px",fontFamily:C}}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px",marginBottom:"9px"}}>{[["protein","🥩 EIWEISS",G],["carbs","🍚 KH",G2],["fat","🥑 FETT",G3],["fiber","🌿 FASERN",G]].map(function(arr){var k=arr[0],l=arr[1];return <div key={k}><Lbl c={l}/><input type="number" value={f[k]} onChange={e=>setF(prev=>({...prev,[k]:e.target.value}))} placeholder="0" style={inpS}/></div>;})}  </div>
+      <button onClick={saveMeal} style={{width:"100%",padding:"10px",background:G+"15",border:"1px solid "+G,borderRadius:"5px",color:G2,fontFamily:C,fontSize:"13px",letterSpacing:"2px",fontWeight:700,cursor:"pointer"}}>＋ HINZUFÜGEN & WEITER</button>
+      <div style={{color:G4,fontSize:"8px",fontFamily:M,textAlign:"center",marginTop:"4px"}}>Speichern → sofort bereit für nächsten Eintrag</div>
+    </div>
+    {(function(){const t3=new Date();t3.setHours(0,0,0,0);const pS2=starts[period];const rel=[...entries].filter(e=>new Date(e.date)>=pS2).sort((a,b)=>new Date(b.date)-new Date(a.date));const days={};rel.forEach(m=>{const dk=new Date(m.date).toDateString();if(!days[dk])days[dk]={date:m.date,meals:[]};days[dk].meals.push(m);});return Object.entries(days).map(function(entry){const dk=entry[0],date=entry[1].date,meals=entry[1].meals;const dt={kcal:meals.reduce((a,m)=>a+m.kcal,0),prot:meals.reduce((a,m)=>a+m.protein,0)};return <div key={dk} style={{marginBottom:"10px"}}><div style={{background:BG2,border:"1px solid "+G4,borderLeft:"3px solid "+G,borderRadius:"5px",padding:"8px 12px",marginBottom:"3px"}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{color:G,fontSize:"9px",fontFamily:M}}>{fdl(date)} · {meals.length} Eintr.</div><div style={{display:"flex",gap:"7px",marginTop:"2px"}}><span style={{color:"#facc15",fontFamily:M,fontSize:"12px",fontWeight:700}}>🔥{dt.kcal.toLocaleString("de-DE")}</span><span style={{color:G2,fontFamily:M,fontSize:"10px"}}>🥩{dt.prot}g</span></div></div><div style={{color:dt.kcal>tgt.kcal?"#ef4444":G,fontSize:"14px"}}>{dt.kcal>tgt.kcal?"⚠️":"✅"}</div></div></div>{meals.map(m=><div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 12px",background:G4+"08",borderRadius:"3px",marginBottom:"2px",marginLeft:"8px",borderLeft:"1px solid "+G4+"30"}}><div style={{flex:1}}><div style={{color:G3,fontFamily:C,fontSize:"11px",fontWeight:700}}>{m.name}</div><div style={{display:"flex",gap:"5px"}}>{m.kcal>0&&<span style={{color:"#facc15",fontFamily:M,fontSize:"9px"}}>{m.kcal}kcal</span>}{m.protein>0&&<span style={{color:G,fontFamily:M,fontSize:"9px"}}>🥩{m.protein}g</span>}</div></div><button onClick={()=>del(m.id)} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"10px"}}>✕</button></div>)}</div>;});})()}
+    {!entries.length&&<div style={{textAlign:"center",padding:"40px",color:G4}}><div style={{fontSize:"28px",marginBottom:"8px"}}>🥗</div><div style={{fontFamily:M,fontSize:"10px"}}>KEINE ERNÄHRUNGSDATEN</div></div>}
+  </div>;
+}
+function ActivityTab(p){
+  const{onTdeeUpdate,bodyWeight}=p;
+  const todayStr=new Date().toISOString().split("T")[0];
+  const[entries,setEntries]=useState([]);const[steps,setSteps]=useState("");const[floors,setFloors]=useState("");const[activities,setActivities]=useState([]);const[addAct,setAddAct]=useState(false);const[newAct,setNewAct]=useState({type:"laufen",duration:30});
+  const bw=bodyWeight||80;
+  useEffect(()=>{stGet(ACT_KEY).then(d=>{if(d){setEntries(d.entries||[]);const td=(d.entries||[]).find(e=>e.date===todayStr);if(td){setSteps(td.steps||"");setFloors(td.floors||"");setActivities(td.activities||[]);}}});},[]);
+  async function saveToday(s,fl,acts){const burn=calcActivityKcal(+s||0,+fl||0,acts,bw);const entry={date:todayStr,steps:+s||0,floors:+fl||0,activities:acts,burn};const others=(entries||[]).filter(e=>e.date!==todayStr);const upd=[...others,entry].sort((a,b)=>a.date<b.date?1:-1);setEntries(upd);await stSet(ACT_KEY,{entries:upd});if(onTdeeUpdate)onTdeeUpdate(burn.total,{steps:+s||0,floors:+fl||0,burn});}
+  function handleSteps(v){setSteps(v);saveToday(v,floors,activities);}
+  function handleFloors(v){setFloors(v);saveToday(steps,v,activities);}
+  function addActivity(){const a=[...activities,{...newAct,id:Date.now()}];setActivities(a);saveToday(steps,floors,a);setAddAct(false);setNewAct({type:"laufen",duration:30});}
+  function removeAct(id){const a=activities.filter(x=>x.id!==id);setActivities(a);saveToday(steps,floors,a);}
+  const todayBurn=calcActivityKcal(+steps||0,+floors||0,activities,bw);
+  const inpS={width:"100%",background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"8px 10px",color:G2,fontFamily:M,fontSize:"18px",fontWeight:700,outline:"none",boxSizing:"border-box",textAlign:"center"};
+  return <div>
+    <div style={{color:G2,fontFamily:C,fontSize:"14px",fontWeight:800,marginBottom:"3px",letterSpacing:"1px"}}>HEUTE — {new Date().toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"2-digit"})}</div>
+    <div style={{color:G4,fontFamily:M,fontSize:"8px",letterSpacing:"2px",marginBottom:"14px"}}>TÄGLICH EINTRAGEN — WIRD AUTOMATISCH VERRECHNET</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",marginBottom:"12px"}}>
+      <div style={{background:BG2,border:"1px solid "+G4,borderRadius:"7px",padding:"12px"}}>
+        <div style={{color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"6px",textAlign:"center"}}>👟 SCHRITTE</div>
+        <input type="number" value={steps} onChange={e=>handleSteps(e.target.value)} placeholder="0" style={inpS}/>
+        {steps>0&&<div style={{color:G,fontFamily:M,fontSize:"10px",textAlign:"center",marginTop:"5px"}}>≈ {todayBurn.stepKcal} kcal</div>}
+        <div style={{marginTop:"8px",height:"4px",background:G4+"20",borderRadius:"2px",overflow:"hidden"}}><div style={{height:"100%",width:Math.min((+steps||0)/15000*100,100)+"%",background:G,borderRadius:"2px",transition:"width 0.5s"}}/></div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:"2px"}}><span style={{color:G4,fontSize:"7px",fontFamily:M}}>0</span><span style={{color:(+steps||0)>=10000?G:G4,fontSize:"7px",fontFamily:M}}>10k ✓</span><span style={{color:G4,fontSize:"7px",fontFamily:M}}>15k</span></div>
+      </div>
+      <div style={{background:BG2,border:"1px solid "+G4,borderRadius:"7px",padding:"12px"}}>
+        <div style={{color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"6px",textAlign:"center"}}>🏢 STOCKWERKE</div>
+        <input type="number" value={floors} onChange={e=>handleFloors(e.target.value)} placeholder="0" style={inpS}/>
+        {floors>0&&<div style={{color:G2,fontFamily:M,fontSize:"10px",textAlign:"center",marginTop:"5px"}}>≈ {todayBurn.floorKcal} kcal</div>}
+        <div style={{marginTop:"8px",height:"4px",background:G4+"20",borderRadius:"2px",overflow:"hidden"}}><div style={{height:"100%",width:Math.min((+floors||0)/20*100,100)+"%",background:G2,borderRadius:"2px",transition:"width 0.5s"}}/></div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:"2px"}}><span style={{color:G4,fontSize:"7px",fontFamily:M}}>0</span><span style={{color:G4,fontSize:"7px",fontFamily:M}}>10</span><span style={{color:G4,fontSize:"7px",fontFamily:M}}>20</span></div>
+      </div>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}><Lbl c="ZUSÄTZLICHE AKTIVITÄTEN" s={{margin:0}}/><button onClick={()=>setAddAct(!addAct)} style={{padding:"4px 10px",background:addAct?G+"15":BG2,border:"1px solid "+(addAct?G:G4),borderRadius:"4px",color:addAct?G2:G4,fontFamily:C,fontSize:"10px",letterSpacing:"1px",cursor:"pointer"}}>{addAct?"ABBRECHEN":"+ AKTIVITÄT"}</button></div>
+    {addAct&&<div style={{background:BG2,border:"1px solid "+G4,borderRadius:"6px",padding:"10px 12px",marginBottom:"10px"}}>
+      <Lbl c="AKTIVITÄTSTYP"/>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"4px",marginBottom:"8px"}}>{ACTIVITY_TYPES.map(t=><button key={t.id} onClick={()=>setNewAct(prev=>({...prev,type:t.id}))} style={{padding:"4px 8px",background:newAct.type===t.id?G+"25":BG2,border:"1px solid "+(newAct.type===t.id?G:G4),borderRadius:"4px",color:newAct.type===t.id?G2:G4,fontFamily:M,fontSize:"8.5px",cursor:"pointer"}}>{t.icon} {t.label}</button>)}</div>
+      <Lbl c={"DAUER: "+newAct.duration+" MIN"}/>
+      <input type="range" min={5} max={180} step={5} value={newAct.duration} onChange={e=>setNewAct(prev=>({...prev,duration:+e.target.value}))} style={{width:"100%",accentColor:G,marginBottom:"8px"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{color:G3,fontFamily:M,fontSize:"10px"}}>≈ {Math.round(((ACTIVITY_TYPES.find(t=>t.id===newAct.type)||{met:5}).met*(bw/60)*(newAct.duration/60)))} kcal</span><button onClick={addActivity} style={{padding:"6px 14px",background:G+"15",border:"1px solid "+G,borderRadius:"4px",color:G2,fontFamily:C,fontSize:"11px",fontWeight:700,cursor:"pointer"}}>+ HINZUFÜGEN</button></div>
+    </div>}
+    {activities.length>0&&<div style={{marginBottom:"12px"}}>{activities.map(act=>{const type=ACTIVITY_TYPES.find(t=>t.id===act.type)||{icon:"🏅",label:"Sonstiges",met:5};const kcal=Math.round(type.met*(bw/60)*(act.duration/60));return <div key={act.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:BG2,border:"1px solid "+G4,borderRadius:"5px",padding:"8px 10px",marginBottom:"5px"}}><div style={{display:"flex",alignItems:"center",gap:"8px"}}><span style={{fontSize:"16px"}}>{type.icon}</span><div><div style={{color:G3,fontFamily:C,fontSize:"12px",fontWeight:700}}>{type.label}</div><div style={{color:G4,fontFamily:M,fontSize:"9px"}}>{act.duration} min</div></div></div><div style={{display:"flex",alignItems:"center",gap:"8px"}}><span style={{color:G,fontFamily:M,fontSize:"11px",fontWeight:700}}>≈{kcal} kcal</span><button onClick={()=>removeAct(act.id)} style={{background:"none",border:"none",color:G4,cursor:"pointer",fontSize:"12px"}}>✕</button></div></div>;})}</div>}
+    <div style={{background:"linear-gradient(135deg,"+G4+"25,"+G5+"15)",border:"1px solid "+G,borderRadius:"8px",padding:"14px 16px",marginBottom:"14px"}}>
+      <div style={{color:G4,fontSize:"8px",fontFamily:M,letterSpacing:"2px",marginBottom:"8px"}}>KALORIENVERBRAUCH HEUTE</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"6px",marginBottom:"10px"}}>{[{l:"SCHRITTE",v:todayBurn.stepKcal,c:G},{l:"STOCKWERKE",v:todayBurn.floorKcal,c:G2},{l:"AKTIVITÄTEN",v:todayBurn.actKcal,c:G3},{l:"GESAMT",v:todayBurn.total,c:"#bbf7d0"}].map(s=><div key={s.l} style={{background:BG2,borderRadius:"5px",padding:"7px 6px",textAlign:"center"}}><div style={{color:G4,fontSize:"7px",fontFamily:M}}>{s.l}</div><div style={{color:s.c,fontSize:"14px",fontWeight:900,fontFamily:C}}>{s.v}</div></div>)}</div>
+      <div style={{color:G4,fontSize:"8px",fontFamily:M,marginBottom:"3px"}}>→ Wird beim Essen-Tab automatisch eingerechnet</div>
+      <div style={{height:"6px",background:G4+"20",borderRadius:"3px",overflow:"hidden"}}><div style={{height:"100%",width:Math.min(todayBurn.total/1000*100,100)+"%",background:"linear-gradient(90deg,"+G4+","+G+")",borderRadius:"3px",transition:"width 0.8s"}}/></div>
+    </div>
+    {entries.filter(e=>e.date!==todayStr).slice(0,7).length>0&&<><Lbl c="LETZTE 7 TAGE"/>{entries.filter(e=>e.date!==todayStr).slice(0,7).map(e=><div key={e.date} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:BG2,border:"1px solid "+G4+"50",borderRadius:"4px",padding:"6px 10px",marginBottom:"4px"}}><span style={{color:G4,fontFamily:M,fontSize:"9px"}}>{new Date(e.date).toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"})}</span><div style={{display:"flex",gap:"10px"}}>{e.steps>0&&<span style={{color:G3,fontFamily:M,fontSize:"9px"}}>👟{(e.steps/1000).toFixed(1)}k</span>}{e.floors>0&&<span style={{color:G3,fontFamily:M,fontSize:"9px"}}>🏢{e.floors}</span>}{e.activities&&e.activities.length>0&&<span style={{color:G3,fontFamily:M,fontSize:"9px"}}>🏅{e.activities.length}</span>}<span style={{color:G,fontFamily:M,fontSize:"10px",fontWeight:700}}>{e.burn&&e.burn.total||0} kcal</span></div></div>)}</>}
+  </div>;
+}
+function GoalsTab(p){
+  const{goals,setGoals}=p;
+  const[editing,setEditing]=useState(false);const[draft,setDraft]=useState(goals);const[newGoal,setNewGoal]=useState("");const[showAdd,setShowAdd]=useState(false);
+  function ror(from,to){const a=[...draft];const x=a.splice(from,1)[0];a.splice(to,0,x);setDraft(a.map((g,i)=>({...g,priority:i+1})));}
+  async function save(){setGoals(draft);await stSet(SK.g,draft);setEditing(false);}
+  function addGoal(){if(!newGoal.trim())return;const ng={id:"custom_"+Date.now(),label:newGoal.trim(),icon:"🎯",priority:draft.length+1,color:G};setDraft(prev=>[...prev,ng]);setNewGoal("");setShowAdd(false);}
+  function delGoal(id){setDraft(prev=>prev.filter(g=>g.id!==id).map((g,i)=>({...g,priority:i+1})));}
+  return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}}><Lbl c="ZIEL-PRIORITÄTEN" s={{margin:0}}/><div style={{display:"flex",gap:"6px"}}><Btn onClick={()=>setShowAdd(!showAdd)} small col={G2}>+ ZIEL</Btn><Btn onClick={()=>editing?save():setEditing(true)} small>{editing?"SPEICHERN":"BEARBEITEN"}</Btn></div></div>
+    {showAdd&&<Card style={{marginBottom:"12px"}}><Lbl c="NEUES ZIEL"/><div style={{display:"flex",gap:"8px"}}><input type="text" value={newGoal} onChange={e=>setNewGoal(e.target.value)} placeholder="z.B. Wettkampfvorbereitung..." onKeyDown={e=>e.key==="Enter"&&addGoal()} style={{flex:1,background:BG2,border:"1px solid "+G4,borderRadius:"4px",padding:"7px 9px",color:G3,fontFamily:M,fontSize:"12px",outline:"none"}}/><Btn onClick={addGoal} disabled={!newGoal.trim()} small>ADD</Btn></div></Card>}
+    {draft.map((g,i)=><div key={g.id} style={{display:"flex",alignItems:"center",gap:"10px",background:BG2,border:"1px solid "+G4,borderLeft:"3px solid "+g.color,borderRadius:"6px",padding:"11px 13px",marginBottom:"8px"}}><div style={{color:g.color,fontFamily:M,fontSize:"12px",fontWeight:800,minWidth:"20px"}}>P{g.priority}</div><div style={{fontSize:"16px"}}>{g.icon}</div><div style={{flex:1,color:G3,fontWeight:700,fontFamily:C,fontSize:"13px"}}>{g.label}</div>{editing&&<div style={{display:"flex",gap:"4px",alignItems:"center"}}>{i>0&&<button onClick={()=>ror(i,i-1)} style={{padding:"2px 6px",background:"transparent",border:"1px solid "+G4,borderRadius:"3px",color:G4,fontSize:"10px",cursor:"pointer"}}>▲</button>}{i<draft.length-1&&<button onClick={()=>ror(i,i+1)} style={{padding:"2px 6px",background:"transparent",border:"1px solid "+G4,borderRadius:"3px",color:G4,fontSize:"10px",cursor:"pointer"}}>▼</button>}<button onClick={()=>delGoal(g.id)} style={{padding:"2px 6px",background:"transparent",border:"1px solid rgba(239,68,68,0.3)",borderRadius:"3px",color:"#f87171",fontSize:"10px",cursor:"pointer"}}>✕</button></div>}</div>)}
+    <Card style={{background:G4+"10",marginTop:"8px"}}><Lbl c="SYSTEM"/><div style={{color:G4,fontSize:"9px",fontFamily:M,lineHeight:"1.9"}}>FL basiert auf Top-50% Scores (Regen ignoriert)<br/>Score = Intensität 40% + Volumen 35% + Effizienz 25%</div></Card>
+  </div>;
+}
+const TABS=[{id:"home",icon:"🐍",label:"HOME"},{id:"create",icon:"⚔️",label:"ERSTELLEN"},{id:"activity",icon:"👟",label:"AKTIVITÄT"},{id:"sleep",icon:"😴",label:"SLEEP"},{id:"food",icon:"🥗",label:"FOOD"},{id:"body",icon:"⚖",label:"BODY"},{id:"goals",icon:"🎯",label:"ZIELE"},{id:"archive",icon:"📅",label:"ARCHIV"}];
+export default function App(){
+  const[tab,setTab]=useState("home");const[sessions,setSessions]=useState([]);const[goals,setGoals]=useState(DEFAULT_GOALS);const[fl,setFl]=useState(42);const[sleep,setSleep]=useState([]);const[body,setBody]=useState([]);const[prs,setPrs]=useState({});const[ready,setReady]=useState(false);const[editFromLog,setEditFromLog]=useState(null);const[activityBurn,setActivityBurn]=useState(0);const[activityData,setActivityData]=useState(null);
+  useEffect(()=>{(async function(){const arr=await Promise.all([stGet(SK.s),stGet(SK.g),stGet(SK.fl),stGet(SK.sl),stGet(SK.b),stGet(SK.pr)]);if(arr[0])setSessions(arr[0]);if(arr[1])setGoals(arr[1]);if(arr[2]!=null)setFl(arr[2]);if(arr[3])setSleep(arr[3]);if(arr[4])setBody(arr[4]);if(arr[5])setPrs(arr[5]);setReady(true);})();},[]);
+  if(!ready)return <div style={{minHeight:"100vh",background:BG,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}}><div style={{color:G,fontFamily:M,fontSize:"10px",letterSpacing:"4px"}}>SPECIAL FORCES PROTOCOL</div><div style={{color:G4,fontFamily:M,fontSize:"8px",letterSpacing:"2px"}}>LADE...</div></div>;
+  return <div style={{minHeight:"100vh",background:BG,color:G3,fontFamily:C,paddingBottom:"70px"}}>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+    <div style={{padding:"12px 16px 10px",borderBottom:"1px solid "+G4,background:BG+"f0",position:"sticky",top:0,zIndex:50,backdropFilter:"blur(8px)",textAlign:"center"}}>
+      <div style={{fontSize:"20px",fontWeight:900,letterSpacing:"2px",color:G2,lineHeight:1.1}}>SPECIAL FORCES PROTOCOL</div>
+      <div style={{color:G4,fontSize:"8px",letterSpacing:"3px",fontFamily:M,marginTop:"2px"}}>ELITE MILITARY FITNESS</div>
+    </div>
+    <div style={{padding:"14px",maxWidth:"580px",margin:"0 auto"}}>
+      {tab==="home"&&<HomeTab sessions={sessions} sleep={sleep} body={body} fl={fl} prs={prs}/>}
+      {tab==="create"&&<CreateTab sessions={sessions} setSessions={setSessions} fl={fl} setFl={setFl} prs={prs} setPrs={setPrs} initEdit={editFromLog} onClearEdit={()=>setEditFromLog(null)}/>}
+      {tab==="activity"&&<ActivityTab onTdeeUpdate={(burn,data)=>{setActivityBurn(burn);setActivityData(data);}} bodyWeight={body[body.length-1]?.weight}/>}
+      {tab==="sleep"&&<SleepTab/>}
+      {tab==="food"&&<FoodTab sessions={sessions} activityBurn={activityBurn} activityData={activityData}/>}
+      {tab==="body"&&<BodyTab/>}
+      {tab==="goals"&&<GoalsTab goals={goals} setGoals={setGoals}/>}
+      {tab==="archive"&&<ArchiveTab sessions={sessions} setSessions={setSessions} onEdit={s=>{setEditFromLog(s);setTab("create");}}/>}
+    </div>
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:BG+"f8",borderTop:"1px solid "+G4,display:"flex",overflowX:"auto",backdropFilter:"blur(12px)"}}>
+      {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",minWidth:"50px",padding:"9px 4px 7px",background:"transparent",border:"none",color:tab===t.id?G2:G4,cursor:"pointer",borderTop:tab===t.id?"2px solid "+G:"2px solid transparent",transition:"color 0.15s"}}><div style={{fontSize:"14px"}}>{t.icon}</div><div style={{fontSize:"7px",letterSpacing:"0.5px",fontFamily:M,marginTop:"1px"}}>{t.label}</div></button>)}
+    </div>
+  </div>;
+}
+
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(React.createElement(App));
+  </script>
+
+  <script>
+    // PWA Service Worker
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+    // Prevent zoom on double-tap
+    let lastTouch = 0;
+    document.addEventListener('touchend', function(e){
+      const now = Date.now();
+      if(now - lastTouch < 300) e.preventDefault();
+      lastTouch = now;
+    }, {passive: false});
+  </script>
+</body>
+</html>
